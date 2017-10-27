@@ -1,0 +1,47 @@
+{{define "content"}}
+<table class="ui striped right aligned table">
+    <thead>
+    <tr>
+        <th class="left aligned">Seen</th>
+        <th class="left aligned">Message</th>
+        <th class="left aligned">Last seen</th>
+        <th class="left aligned">Site</th>
+        <th class="left aligned">Server name</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    {{range $event := .Events}}
+    <tr>
+        <td class="left aligned">{{ .Seen }}</td>
+        <td class="left aligned"><a href="/details/{{ .Id }}">{{ .Message }}</a></td>
+        <td class="left aligned">{{ .LastSeen }}</td>
+        <td class="left aligned">{{ .Seen }}</td>
+        <td class="left aligned">{{ .ServerName }}</td>
+        <td><button class="ui icon button acknowledge" data-id="{{ .Id }}"><i class="checkmark icon"></i></button></td>
+    </tr>
+    {{end}}
+    </tbody>
+</table>
+
+<script type="text/javascript">
+    appCode.push(function () {
+        $('.acknowledge').click(function () {
+            var $el = $(this);
+            $el.addClass('disabled');
+            $el.find('i').removeClass('checkmark').addClass('notched circle loading');
+            $.ajax({
+                type: "POST",
+                url: '/acknowledge/' + $(this).data('id') + '/' + ($(this).hasClass('green') ? 0 : 1),
+                success: function (data) {
+                    $el.find('i').removeClass('notched circle loading').addClass('checkmark');
+                    if (data.error == false) {
+                        $el.toggleClass('green').removeClass('disabled');
+                        $el.closest('tr').toggleClass('acknowledged');
+                    }
+                }
+            });
+        });
+    });
+</script>
+{{end}}

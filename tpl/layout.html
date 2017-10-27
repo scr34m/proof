@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Error tracking</title>
+    <link rel="stylesheet" href="/assets/css/semantic.min.css">
+    <style type="text/css">
+        body > .ui.container {
+            margin-top: 3em;
+        }
+        .ui.label strong {
+            color: black;
+        }
+        .ui.table:last-child {
+            margin-bottom: 1em;
+        }
+        tr.acknowledged td {
+            opacity: 0.5;
+        }
+        .frame .lines {
+            list-style-position: inside;
+            margin-left: 0;
+            padding-left: 0;
+        }
+        .frame .lines li {
+            font-family: monospace;
+            font-size: 12px;
+            display: none;
+            cursor: pointer;
+            line-height: 20px;
+            padding-left: 20px;
+        }
+        .frame .lines li.context-line {
+            background-color: #e8e8e8;
+        }
+        .frame .vars {
+            display: none;
+        }
+        .frame.reveal {
+            background-color: #f7f7f7;
+        }
+        .frame .lines li.context-line,
+        .frame.reveal li {
+            display: list-item;
+        }
+        .frame.reveal .vars {
+            display: table;
+        }
+    </style>
+    <script>
+        var appCode = [];
+
+        if (Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
+
+        function notification(title, content) {
+            if (!Notification) {
+                return false;
+            }
+
+            if (Notification.permission !== "granted")
+                Notification.requestPermission();
+
+            return new Notification(title, {body: content});
+        }
+
+        var lastStatusCheck = '{{ .Time }}';
+        var w = new Worker('/assets/js/worker.js');
+        w.addEventListener('message', function (e) {
+            $.get('/status/?time=' + lastStatusCheck, function (data) {
+                if (data.count) {
+                    lastStatusCheck = data.time;
+                    notification(data.count + ' new error report', '');
+                }
+                w.postMessage('start');
+            });
+        });
+        appCode.push(function () {
+            w.postMessage('start');
+        });
+    </script>
+</head>
+
+<body>
+<div class="ui container">
+    <div class="ui secondary pointing menu">
+        <a href="?" class="active item">Events</a>
+    </div>
+    {{template "content" .}}
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="/assets/js/semantic.min.js"></script>
+<script type="text/javascript">
+    $.each(appCode,function(i,f){
+        f.call();
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>Label</key>
+        <string>Proof</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>/usr/local/proof/proof</string>
+            <string>-listen=:2018</string>
+            <string>-database=/usr/local/proof/proof.db</string>
+        </array>
+        <key>WorkingDirectory</key>
+        <string>/usr/local/proof/</string>
+        <key>StandardOutPath</key>
+        <string>/usr/local/proof/proof.log</string>
+        <key>StandardErrorPath</key>
+        <string>/usr/local/proof/proof.log</string>
+        <key>KeepAlive</key>
+        <true/>
+        <key>Disabled</key>
+        <false/>
+    </dict>
+</plist>

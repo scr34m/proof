@@ -1,0 +1,43 @@
+{{define "content"}}
+<div class="ui message">
+    <p>
+    <pre>{{ .Message }}</pre>
+    </p>
+</div>
+
+<h2>Tags</h2>
+
+<p>
+<div class="ui label"><strong>level</strong> = {{ .Level }}</div>
+<div class="ui label"><strong>logger</strong> = {{ .Logger }}</div>
+<div class="ui label"><strong>server_name</strong> = {{ .ServerName }}</div>
+<div class="ui label"><strong>platform</strong> = {{ .Platform }}</div>
+<div class="ui label"><strong>site</strong> = {{ .Site }}</div>
+</p>
+
+<h2>Exception</h2>
+
+{{range $k, $frame := .Frames}}
+<div class="frame frame-{{ $k }}">
+    <p>{{ $frame.AbsPath }} in {{ $frame.Function }}</p>
+    <ol start="{{ $frame.LineNo }}" class="lines">
+        {{range $line := $frame.PreContext}}
+        <li>{{ $line }}</li>
+        {{end}}
+        <li class="context-line">{{ $frame.Context }}</li>
+        {{range $line := $frame.PostContext}}
+        <li>{{ $line }}</li>
+        {{end}}
+    </ol>
+    {{ $frame.Vars }}
+</div>
+{{end}}
+
+<script type="text/javascript">
+    appCode.push(function () {
+        $('.frame li').click(function () {
+            $(this).closest('.frame').toggleClass('reveal');
+        });
+    });
+</script>
+{{end}}
