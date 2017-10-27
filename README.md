@@ -1,3 +1,10 @@
+Sentry configuration
+===
+
+```
+$client = new Raven_Client('http://any:data@10.33.214.1:2017/track/1');
+```
+
 Install as a macOS service
 ===
 
