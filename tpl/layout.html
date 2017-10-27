@@ -52,43 +52,13 @@
     </style>
     <script>
         var appCode = [];
-
-        if (Notification.permission !== "granted") {
-            Notification.requestPermission();
-        }
-
-        function notification(title, content) {
-            if (!Notification) {
-                return false;
-            }
-
-            if (Notification.permission !== "granted")
-                Notification.requestPermission();
-
-            return new Notification(title, {body: content});
-        }
-
-        var lastStatusCheck = '{{ .Time }}';
-        var w = new Worker('/assets/js/worker.js');
-        w.addEventListener('message', function (e) {
-            $.get('/status/?time=' + lastStatusCheck, function (data) {
-                if (data.count) {
-                    lastStatusCheck = data.time;
-                    notification(data.count + ' new error report', '');
-                }
-                w.postMessage('start');
-            });
-        });
-        appCode.push(function () {
-            w.postMessage('start');
-        });
     </script>
 </head>
 
 <body>
 <div class="ui container">
     <div class="ui secondary pointing menu">
-        <a href="?" class="active item">Events</a>
+        <a href="/" class="active item">Events</a>
     </div>
     {{template "content" .}}
 </div>
