@@ -10,6 +10,7 @@ import (
 	"github.com/nbari/violetear"
 	r "github.com/scr34m/proof/router"
 	"github.com/scr34m/proof/notification"
+	"os"
 )
 
 var version = "0.1"
@@ -44,6 +45,9 @@ func recoverHandler(ctx *stack.Context, next http.Handler) http.Handler {
 }
 
 func main() {
+	// XXX for terminal-notification
+	os.Setenv("PATH", os.Getenv("PATH")+":/usr/local/bin")
+
 	log.Printf("Proof %s starting", version)
 
 	flag.Parse()

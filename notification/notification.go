@@ -4,6 +4,7 @@ import (
 	"time"
 	"github.com/scr34m/gosx-notifier"
 	"fmt"
+	"log"
 )
 
 type Notification struct {
@@ -52,5 +53,8 @@ func (n *Notification) timeout() {
 	note.Link = fmt.Sprintf("http://%s/details/%d", n.url, n.Id)
 	note.Timeout = n.Timeout
 	note.AppIcon = "assets/appicon.png"
-	note.Push()
+	err := note.Push()
+	if err != nil {
+		log.Print(err)
+	}
 }
