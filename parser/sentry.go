@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	"time"
+	"github.com/scr34m/proof/notification"
 )
 
 type Sentry struct {
@@ -70,7 +71,7 @@ func (s *Sentry) Load(payload string) error {
 	return nil
 }
 
-func (s *Sentry) Process() error {
+func (s *Sentry) Process(notif *notification.Notification) error {
 	// https://stackoverflow.com/questions/13331973/how-does-sentry-aggregate-errors
 
 	// https://github.com/getsentry/sentry/blob/master/src/sentry/interfaces/user.py
@@ -145,6 +146,8 @@ func (s *Sentry) Process() error {
 			return err
 		}
 	}
+
+	notif.Ping(groupId, s.Packet.Message)
 
 	stmt, err = s.Database.Prepare("INSERT INTO event (data_id, group_id, message, checksum) VALUES (?, ?, ?, ?)")
 	if err != nil {

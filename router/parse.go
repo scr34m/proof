@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"github.com/alexedwards/stack"
 	"database/sql"
+	"github.com/scr34m/proof/notification"
 )
 
 func Parser(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
@@ -20,5 +21,5 @@ func Parser(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	s.Process()
+	s.Process(ctx.Get("notif").(*notification.Notification))
 }

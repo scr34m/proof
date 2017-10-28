@@ -1,3 +1,8 @@
+Standalone / self hosted stacktrace logger wrapper
+===
+
+Currently the only supported is Sentry client library.
+
 Sentry configuration
 ===
 

@@ -9,6 +9,7 @@ import (
 	"github.com/alexedwards/stack"
 	"github.com/nbari/violetear"
 	r "github.com/scr34m/proof/router"
+	"github.com/scr34m/proof/notification"
 )
 
 var version = "0.1"
@@ -16,10 +17,12 @@ var version = "0.1"
 var databaseSource = flag.String("database", "proof.db", "database file")
 var listen = flag.String("listen", ":2017", "Location to listen for connections")
 var db *sql.DB
+var notif *notification.Notification
 
 func loggingHandler(ctx *stack.Context, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx.Put("db", db)
+		ctx.Put("notif", notif)
 		t1 := time.Now()
 		next.ServeHTTP(w, r)
 		t2 := time.Now()
@@ -51,6 +54,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	notif = notification.NewNotification(*listen, 1000)
 
 	router := violetear.New()
 	router.AddRegex(":num", `[0-9]+`)
