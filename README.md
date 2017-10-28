@@ -22,3 +22,9 @@ cp proof /usr/local/proof/
 launchctl load ~/Library/LaunchAgents/proof.plist
 launchctl list
 ```
+
+For notifications the terminal-notifier is required:
+
+```
+brew install terminal-notifier
+```

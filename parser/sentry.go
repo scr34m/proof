@@ -147,7 +147,7 @@ func (s *Sentry) Process(notif *notification.Notification) error {
 		}
 	}
 
-	notif.Ping(groupId, s.Packet.Message)
+	notif.Ping(groupId, s.Packet.Message, s.Packet.ServerName, s.Packet.Level)
 
 	stmt, err = s.Database.Prepare("INSERT INTO event (data_id, group_id, message, checksum) VALUES (?, ?, ?, ?)")
 	if err != nil {
