@@ -39,3 +39,6 @@ tr.acknowledged td {
 .frame.reveal .vars {
     display: table;
 }
+.hidden {
+    display: none !important;
+}

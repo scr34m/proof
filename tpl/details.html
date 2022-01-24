@@ -33,12 +33,42 @@
 </div>
 {{end}}
 
+<h2>Request</h2>
+
+<table class="ui striped right aligned table">
+    {{range $k, $request := .Request}}
+    <tr>
+        <td class="left aligned"><strong>{{ $request.Name }}</strong></td>
+        <td class="left aligned">
+            {{if $request.ValueList}}
+            <table class="ui striped right aligned table context-list">
+                {{range $k2, $request2 := $request.ValueList}}
+                <tr>
+                    <td class="left aligned two wide"><strong>{{ $request2.Name }}</strong></td>
+                    <td class="left aligned">{{ $request2.Value }}</td>
+                </tr>
+                {{end}}
+                <tr>
+                    <td class="center aligned" colspan="2"><a href="#">Collapse context</a></td>
+                </tr>
+                <tr>
+                    <td class="center aligned" colspan="2"><a href="#">Expand context <span>(0)</span></a></td>
+                </tr>
+            </table>
+            {{else}}
+            {{ $request.Value }}
+            {{end}}
+        </td>
+    </tr>
+    {{end}}
+</table>
+
 <h2>User</h2>
 
 <table class="ui striped right aligned table">
     {{range $k, $v := .User}}
     <tr>
-        <td class="left aligned">{{ $k }}</td>
+        <td class="left aligned two wide"><strong>{{ $k }}</strong></td>
         <td class="left aligned">{{ $v }}</td>
     </tr>
     {{end}}
@@ -48,6 +78,30 @@
     appCode.push(function () {
         $('.frame li').click(function () {
             $(this).closest('.frame').toggleClass('reveal');
+        });
+        $('.context-list').each(function(){
+            var c = $(this), trs = c.find('tr'), count = trs.length - 2;
+            if (count < 5) {
+                $(trs[trs.length - 1]).addClass('hidden');
+                $(trs[trs.length - 2]).addClass('hidden');
+                return;
+            }
+            $(trs[trs.length - 1]).find('a').click(function(e){
+                e.preventDefault();
+                for (i=2;i<count;i++) {
+                    $(trs[i]).removeClass('hidden');
+                }
+                $(trs[trs.length - 1]).addClass('hidden');
+                $(trs[trs.length - 2]).removeClass('hidden');
+            }).find('span').html('('+count+')');
+            $(trs[trs.length - 2]).find('a').click(function(e){
+                e.preventDefault();
+                for (i=2;i<count;i++) {
+                    $(trs[i]).addClass('hidden');
+                }
+                $(trs[trs.length - 1]).removeClass('hidden');
+                $(trs[trs.length - 2]).addClass('hidden');
+            }).click();
         });
     });
 </script>

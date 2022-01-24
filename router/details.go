@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -32,6 +33,12 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		Vars        template.HTML
 	}
 
+	type request struct {
+		Name      string
+		Value     string
+		ValueList []request
+	}
+
 	type data struct {
 		Menu       string
 		MenuLink   string
@@ -44,6 +51,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		Platform   string
 		Site       string
 		Frames     []frame
+		Request    []request
 		User       map[string]string
 	}
 
@@ -98,6 +106,20 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		}
 
 		d.Frames = append(d.Frames, f)
+	}
+
+	http := m["sentry.interfaces.Http"].(map[string]interface{})
+	for k, v := range http {
+		r := request{Name: k}
+		if reflect.TypeOf(v).Kind() == reflect.String {
+			r.Value = v.(string)
+		} else {
+			for k2, v2 := range v.(map[string]interface{}) {
+				b, _ := json.Marshal(v2)
+				r.ValueList = append(r.ValueList, request{Name: k2, Value: string(b)})
+			}
+		}
+		d.Request = append(d.Request, r)
 	}
 
 	d.User = make(map[string]string)
