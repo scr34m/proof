@@ -1,7 +1,5 @@
-Standalone / self hosted stacktrace logger wrapper
+Minimal Sentry alternative / drop-in replacement for development / local use, easy install with out any extra dependencies.
 ===
-
-Currently the only supported is Sentry client library.
 
 Sentry configuration
 ===
@@ -23,7 +21,7 @@ launchctl load ~/Library/LaunchAgents/proof.plist
 launchctl list
 ```
 
-For notifications the terminal-notifier is required:
+For macOS notifications the terminal-notifier is required:
 
 ```
 brew install terminal-notifier
