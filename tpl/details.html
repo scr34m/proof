@@ -33,6 +33,17 @@
 </div>
 {{end}}
 
+<h2>User</h2>
+
+<table class="ui striped right aligned table">
+    {{range $k, $v := .User}}
+    <tr>
+        <td class="left aligned">{{ $k }}</td>
+        <td class="left aligned">{{ $v }}</td>
+    </tr>
+    {{end}}
+</table>
+
 <script type="text/javascript">
     appCode.push(function () {
         $('.frame li').click(function () {

@@ -44,6 +44,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		Platform   string
 		Site       string
 		Frames     []frame
+		User       map[string]string
 	}
 
 	d := data{}
@@ -97,6 +98,13 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		}
 
 		d.Frames = append(d.Frames, f)
+	}
+
+	d.User = make(map[string]string)
+	user := m["sentry.interfaces.User"].(map[string]interface{})
+	for k, v := range user {
+		b, _ := json.Marshal(v)
+		d.User[k] = string(b)
 	}
 
 	templates := template.Must(template.ParseFiles("tpl/layout.html", "tpl/details.html"))
