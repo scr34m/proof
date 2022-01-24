@@ -7,49 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Error tracking</title>
     <link rel="stylesheet" href="/assets/css/semantic.min.css">
-    <style type="text/css">
-        body > .ui.container {
-            margin-top: 3em;
-        }
-        .ui.label strong {
-            color: black;
-        }
-        .ui.table:last-child {
-            margin-bottom: 1em;
-        }
-        tr.acknowledged td {
-            opacity: 0.5;
-        }
-        .frame .lines {
-            list-style-position: inside;
-            margin-left: 0;
-            padding-left: 0;
-        }
-        .frame .lines li {
-            font-family: monospace;
-            font-size: 12px;
-            display: none;
-            cursor: pointer;
-            line-height: 20px;
-            padding-left: 20px;
-        }
-        .frame .lines li.context-line {
-            background-color: #e8e8e8;
-        }
-        .frame .vars {
-            display: none;
-        }
-        .frame.reveal {
-            background-color: #f7f7f7;
-        }
-        .frame .lines li.context-line,
-        .frame.reveal li {
-            display: list-item;
-        }
-        .frame.reveal .vars {
-            display: table;
-        }
-    </style>
+    <link rel="stylesheet" href="/assets/css/app.css">
     <script>
         var appCode = [];
     </script>
@@ -58,7 +16,10 @@
 <body>
 <div class="ui container">
     <div class="ui secondary pointing menu">
-        <a href="/" class="active item">Events</a>
+        <a href="/" class="{{if eq .Menu "index"}}active{{end}} item">Events</a>
+        {{if eq .Menu "details"}}
+        <a href="{{ .MenuLink }}" class="active item">Details</a>
+        {{end}}
     </div>
     {{template "content" .}}
 </div>

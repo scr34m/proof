@@ -1,11 +1,12 @@
 package router
 
 import (
-	"net/http"
-	"github.com/alexedwards/stack"
 	"database/sql"
 	"html/template"
+	"net/http"
 	"time"
+
+	"github.com/alexedwards/stack"
 )
 
 func Index(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
@@ -38,11 +39,16 @@ func Index(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
+		Menu     string
+		MenuLink string
+
 		Time   string
 		Events []event
 	}{
-		Time:   time.Now().Format("2006-01-02 15:04:05"),
-		Events: events,
+		Menu:     "index",
+		MenuLink: "/",
+		Time:     time.Now().Format("2006-01-02 15:04:05"),
+		Events:   events,
 	}
 	templates := template.Must(template.ParseFiles("tpl/layout.html", "tpl/index.html"))
 	templates.Execute(w, data)

@@ -1,18 +1,19 @@
 package router
 
 import (
-	"net/http"
-	"github.com/alexedwards/stack"
-	"database/sql"
-	"strings"
-	"time"
 	"bytes"
 	"compress/zlib"
-	"io/ioutil"
-	"encoding/json"
+	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"html/template"
+	"io/ioutil"
+	"net/http"
 	"strconv"
+	"strings"
+	"time"
+
+	"github.com/alexedwards/stack"
 )
 
 func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
@@ -32,6 +33,8 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	type data struct {
+		Menu       string
+		MenuLink   string
 		Time       string
 		Message    string
 		Data       string
@@ -44,6 +47,9 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	d := data{}
+	d.Menu = "details"
+	d.MenuLink = r.URL.Path
+
 	d.Time = time.Now().Format("2006-01-02 15:04:05")
 
 	stmt, err := db.Prepare("SELECT d.data, e.message, g.level, g.logger, g.server_name, g.platform, g.site FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ?")
@@ -140,7 +146,7 @@ func formatVarsArray(a []interface{}) string {
 		content += `</td>`
 		content += `</tr>`
 	}
-	return content;
+	return content
 }
 
 func formatVarsMap(m map[string]interface{}) string {
@@ -159,7 +165,7 @@ func formatVarsMap(m map[string]interface{}) string {
 		content += `</td>`
 		content += `</tr>`
 	}
-	return content;
+	return content
 }
 
 func decode(payload string) (map[string]interface{}, error) {
@@ -180,7 +186,7 @@ func decode(payload string) (map[string]interface{}, error) {
 
 	var x map[string]interface{}
 
-	err = json.Unmarshal(p, &x);
+	err = json.Unmarshal(p, &x)
 	if err != nil {
 		return nil, err
 	}
