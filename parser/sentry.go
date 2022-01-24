@@ -1,18 +1,19 @@
 package parser
 
 import (
-	"encoding/base64"
 	"bytes"
 	"compress/zlib"
-	"log"
-	"io/ioutil"
-	"encoding/json"
-	"strings"
 	"crypto/md5"
-	"encoding/hex"
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"io/ioutil"
+	"log"
+	"strings"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/scr34m/proof/notification"
 )
 
@@ -63,7 +64,7 @@ func (s *Sentry) Load(payload string) error {
 		return err
 	}
 
-	err = json.Unmarshal(p, &s.Packet);
+	err = json.Unmarshal(p, &s.Packet)
 	if err != nil {
 		return err
 	}
@@ -80,18 +81,18 @@ func (s *Sentry) Process(notif *notification.Notification) error {
 	// https://github.com/getsentry/sentry/blob/master/src/sentry/interfaces/http.py
 	// ignore sentry.interfaces.Http
 
-	content := "";
+	content := ""
 
 	// https://github.com/getsentry/sentry/blob/master/src/sentry/interfaces/exception.py
 	// sentry.interfaces.Exception
 	if len(s.Packet.InterfaceException) > 0 {
-		content += getContentException(s.Packet.InterfaceException);
+		content += getContentException(s.Packet.InterfaceException)
 	}
 
 	// https://github.com/getsentry/sentry/blob/master/src/sentry/interfaces/stacktrace.py
 	// sentry.interfaces.Stacktrace
 	if len(s.Packet.InterfaceStacktrace) > 0 {
-		content += getContentStacktrace(s.Packet.InterfaceStacktrace);
+		content += getContentStacktrace(s.Packet.InterfaceStacktrace)
 	}
 
 	checksum := GetMD5Hash(content)
@@ -147,7 +148,9 @@ func (s *Sentry) Process(notif *notification.Notification) error {
 		}
 	}
 
-	notif.Ping(groupId, s.Packet.Message, s.Packet.ServerName, s.Packet.Level)
+	if notif != nil {
+		notif.Ping(groupId, s.Packet.Message, s.Packet.ServerName, s.Packet.Level)
+	}
 
 	stmt, err = s.Database.Prepare("INSERT INTO event (data_id, group_id, message, checksum) VALUES (?, ?, ?, ?)")
 	if err != nil {
@@ -197,76 +200,76 @@ func (s *Sentry) storeData(lastSeen time.Time) error {
 }
 
 func getContentException(m M) string {
-	output := "";
+	output := ""
 
 	// XXX stacktrace ignored
-	output += m["type"].(string);
-	output += m["value"].(string);
+	output += m["type"].(string)
+	output += m["value"].(string)
 
 	/*
-	Exception
-		def get_hash(self, platform=None, system_frames=True):
-			# optimize around the fact that some exceptions might have stacktraces
-			# while others may not and we ALWAYS want stacktraces over values
-			output = []
-			for value in self.values:
-				if not value.stacktrace:
-					continue
-				stack_hash = value.stacktrace.get_hash(
-					platform=platform,
-					system_frames=system_frames,
-				)
-				if stack_hash:
-					output.extend(stack_hash)
-					output.append(value.type)
-
-			if not output:
+		Exception
+			def get_hash(self, platform=None, system_frames=True):
+				# optimize around the fact that some exceptions might have stacktraces
+				# while others may not and we ALWAYS want stacktraces over values
+				output = []
 				for value in self.values:
-					output.extend(value.get_hash(platform=platform))
+					if not value.stacktrace:
+						continue
+					stack_hash = value.stacktrace.get_hash(
+						platform=platform,
+						system_frames=system_frames,
+					)
+					if stack_hash:
+						output.extend(stack_hash)
+						output.append(value.type)
 
-			return output
+				if not output:
+					for value in self.values:
+						output.extend(value.get_hash(platform=platform))
+
+				return output
 	*/
-	return output;
+	return output
 }
 
 func getContentFrame(m M) string {
-	output := "";
+	output := ""
 	if m["filename"].(string) == "[native code]" {
 		log.Printf(output)
-		return output;
+		return output
 	}
 	if m["module"] != nil {
-		output += m["module"].(string);
+		output += m["module"].(string)
 	} else if m["filename"] != nil && !isUrl(m["filename"].(string)) { // XXX ignored is_caused_by
-		output += m["filename"].(string);
+		output += m["filename"].(string)
 	}
 	// XXX context_line simplified
 	if m["context_line"] != nil && len(m["context_line"].(string)) < 120 {
-		output += m["context_line"].(string);
+		output += m["context_line"].(string)
 	} else if m["symbol"] != nil {
-		output += m["symbol"].(string);
+		output += m["symbol"].(string)
 	} else if m["function"] != nil {
-		output += m["function"].(string);
+		output += m["function"].(string)
 	} else if m["lineno"] != nil {
-		output += m["lineno"].(string);
+		output += m["lineno"].(string)
 	}
 
-	return output;
+	return output
 }
 
 func getContentStacktrace(m M) string {
-	output := "";
+	output := ""
 	frames := m["frames"].([]interface{})
 	if frames != nil {
 		first := frames[0].(map[string]interface{})
 		if first["function"] != nil && isUrl(first["filename"].(string)) {
-			return output;
+			return output
 		}
 	}
 
 	for _, frame := range m["frames"].([]interface{}) {
 		// XXX ingored in_app value in frames
-		output += getContentFrame(frame.(map[string]interface{}));
+		output += getContentFrame(frame.(map[string]interface{}))
 	}
 
 	return output
@@ -274,15 +277,15 @@ func getContentStacktrace(m M) string {
 
 func isUrl(s string) bool {
 	if strings.Contains(s, "file:") {
-		return true;
+		return true
 	}
 	if strings.Contains(s, "http:") {
-		return true;
+		return true
 	}
 	if strings.Contains(s, "https:") {
-		return true;
+		return true
 	}
-	return false;
+	return false
 }
 
 func GetMD5Hash(text string) string {

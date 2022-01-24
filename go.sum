@@ -1,0 +1,10 @@
+github.com/alexedwards/stack v0.0.0-20160719074228-3ba431d5d12d h1:Dglg+735LrUpHAY4KX5KlTjgki9HWJpvubnq/uh3mnE=
+github.com/alexedwards/stack v0.0.0-20160719074228-3ba431d5d12d/go.mod h1:Woal3KHKBSiQ/vwtBZUuea+GuR48mpz2TziRODQqVXk=
+github.com/go-sql-driver/mysql v1.6.0 h1:BCTh4TKNUYmOmMUcQ3IipzF5prigylS7XXjEkfCHuOE=
+github.com/go-sql-driver/mysql v1.6.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
+github.com/mattn/go-sqlite3 v1.14.7 h1:fxWBnXkxfM6sRiuH3bqJ4CfzZojMOLVc0UTsTglEghA=
+github.com/mattn/go-sqlite3 v1.14.7/go.mod h1:NyWgC/yNuGj7Q9rpYnZvas74GogHl5/Z4A/KQRfk6bU=
+github.com/nbari/violetear v0.0.0-20210524103009-ce83b52538c9 h1:L5+NHqJtAZ/BBVY3A3YkAeiPp5q8bXuufST62E2Skpo=
+github.com/nbari/violetear v0.0.0-20210524103009-ce83b52538c9/go.mod h1:DZERM3bJoILVxK77tZRrEyLyAoQdgFEM2uYtwWMUjPU=
+github.com/scr34m/gosx-notifier v0.0.0-20171028061049-1e2edd800ab5 h1:w7m0OAtuXSLYHXhg3Ay4dkGwYbw8gvZkXHiwSAXA2o4=
+github.com/scr34m/gosx-notifier v0.0.0-20171028061049-1e2edd800ab5/go.mod h1:tKEaA823e/jz9Ghr2u0/QAG2LQSKOS2Up2iydh4vebU=

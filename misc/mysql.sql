@@ -5,7 +5,7 @@ CREATE TABLE `event` (
   `message` longtext NOT NULL,
   `checksum` varchar(32) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `group` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -23,12 +23,12 @@ CREATE TABLE `group` (
   `url` varchar(200) DEFAULT NULL,
   `site` varchar(128) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `data` (
   `id` varchar(32) NOT NULL,
   `data` longtext NOT NULL,
   `timestamp` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

@@ -1,22 +1,31 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"log"
 	"net/http"
-	"time"
-	"database/sql"
-	"github.com/alexedwards/stack"
-	"github.com/nbari/violetear"
-	r "github.com/scr34m/proof/router"
-	"github.com/scr34m/proof/notification"
 	"os"
+	"strconv"
+	"time"
+
+	"github.com/alexedwards/stack"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/nbari/violetear"
+	"github.com/scr34m/proof/notification"
+	r "github.com/scr34m/proof/router"
 )
 
-var version = "0.1"
+var version = "0.2"
 
-var databaseSource = flag.String("database", "proof.db", "database file")
+var databaseType = flag.String("type", "sqlite", "database driver type (mysql|sqlite)")
+var databaseHost = flag.String("host", "127.0.0.1", "database host")
+var databasePort = flag.Int("port", 3306, "database port")
+var databaseUsername = flag.String("username", "", "database user")
+var databasePassword = flag.String("password", "", "database password")
+var databaseName = flag.String("database", "proof.db", "database name or file")
 var listen = flag.String("listen", ":2017", "Location to listen for connections")
+var notificationShow = flag.Bool("notification", true, "Local notification (only OSX)")
 var db *sql.DB
 var notif *notification.Notification
 
@@ -45,21 +54,42 @@ func recoverHandler(ctx *stack.Context, next http.Handler) http.Handler {
 }
 
 func main() {
-	// XXX for terminal-notification
-	os.Setenv("PATH", os.Getenv("PATH")+":/usr/local/bin")
-
 	log.Printf("Proof %s starting", version)
 
 	flag.Parse()
 
 	var err error
 
-	db, err = sql.Open("sqlite3", *databaseSource)
-	if err != nil {
-		log.Fatal(err)
+	if *databaseType == "mysql" {
+		var dsn = ""
+
+		if *databaseUsername != "" && *databasePassword != "" {
+			dsn += *databaseUsername
+			dsn += ":" + *databasePassword
+			dsn += "@"
+		} else if *databaseUsername != "" {
+			dsn += *databaseUsername + "@"
+		}
+		dsn += "tcp(" + *databaseHost + ":" + strconv.Itoa(*databasePort) + ")"
+		dsn += "/" + *databaseName
+
+		db, err = sql.Open("mysql", dsn)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		db, err = sql.Open("sqlite3", *databaseName)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
-	notif = notification.NewNotification(*listen, 1000)
+	if *notificationShow {
+		// XXX for terminal-notification
+		os.Setenv("PATH", os.Getenv("PATH")+":/usr/local/bin")
+
+		notif = notification.NewNotification(*listen, 1000)
+	}
 
 	router := violetear.New()
 	router.AddRegex(":num", `[0-9]+`)
