@@ -98,7 +98,9 @@ func main() {
 	stk := stack.New(loggingHandler, recoverHandler)
 
 	router.Handle("/", stk.Then(r.Index), "GET")
-	router.Handle("/track/api/store", stk.Then(r.Parser), "POST") // sentry specific
+	router.Handle("/:num", stk.Then(r.Parser), "POST")
+	router.Handle("/track/:num", stk.Then(r.Parser), "POST")
+	router.Handle("/track/api/store", stk.Then(r.Parser), "POST")
 	router.Handle("/status/:any", stk.Then(r.Status), "GET")
 	router.Handle("/acknowledge/:num/:num", stk.Then(r.Acknowledge), "POST")
 	router.Handle("/details/:num", stk.Then(r.Details), "GET")
