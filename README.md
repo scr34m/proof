@@ -8,6 +8,23 @@ Sentry configuration
 $client = new Raven_Client('http://any:data@10.33.214.1:2017/track/1');
 ```
 
+Auth mode configuration file
+===
+
+```
+[[user]]
+name = "Gabor Gyorvari"
+email = "scr34m@gmail.com"
+password = "1"
+enabled = true
+
+[[site]]
+name = "1"
+username = "a4f7646fd83544dd9499c18561338d56"
+password = "62b2a152380044f28753c26a83cf2ee3"
+enabled = true
+```
+
 Install as a macOS service
 ===
 
