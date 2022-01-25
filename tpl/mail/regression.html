@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html style="font-weight: 200">
+<head style="font-weight: 200">
+</head>
+
+<body style='font-weight: 200; width: 100%; font-size: 14px; font-family: "Helvetica Neue", helvetica, sans-serif; border: 0; padding: 0; margin: 0'>
+<table class="main" style='font-weight: 200; width: 100%; font-size: 14px; font-family: "Helvetica Neue", helvetica, sans-serif; border: 0; padding: 0; margin: 0'>
+    <tr style="font-weight: 200">
+        <td style="font-weight: 200; padding: 0; margin: 0; text-align: center">
+            <div class="body" style="font-weight: 200; max-width: 600px; margin: 0 auto; text-align: left">
+                <div class="header" style="font-weight: 200; padding: 20px 0; font-size: 14px; border-bottom: 2px solid #eee">
+                    <a href="{{ .DetailsUrl }}" class="btn" style="text-decoration: none; float: right; color: #fff; background: #009c95; padding: 8px 15px; line-height: 18px; margin: 4px 0; font-weight: normal; border-radius: 4px; -moz-border-radius: 4px; -webkit-border-radius: 4px">View</a>
+                    <h1 style="margin: 0; padding: 0; font-weight: normal; font-size: 20px; line-height: 42px; color: #000; letter-spacing: -1px">{{ .Event }} on {{ .Site }}</h1>
+                </div>
+                <div style="font-weight: 200; background: #fff; padding: 10px 0">
+                    <pre style='word-break: break-all; word-wrap: break-word; white-space: -o-pre-wrap; font-size: 14px; font-weight: normal; font-family: Menlo, Monaco, "Courier New", monospace; margin-bottom: 15px'>{{ .Message }}</pre>
+                    <pre style='word-break: break-all; word-wrap: break-word; white-space: -o-pre-wrap; font-size: 14px; font-weight: normal; font-family: Menlo, Monaco, "Courier New", monospace; margin-bottom: 15px'>{{ .Stacktrace }}</pre>
+                </div>
+                <div style="font-weight: 200; border-top: 2px solid #eee; padding: 40px 0">
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

@@ -17,6 +17,7 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/nbari/violetear"
 	"github.com/scr34m/proof/config"
+	m "github.com/scr34m/proof/mail"
 	"github.com/scr34m/proof/notification"
 	r "github.com/scr34m/proof/router"
 )
@@ -31,11 +32,13 @@ var listen = flag.String("listen", ":2017", "Location to listen for connections"
 var notificationShow = flag.Bool("notification", true, "Local notification (only OSX)")
 var authMode = flag.Bool("auth", false, "Authenticated mode")
 var authDatabase = flag.String("authdatabase", "proof.toml", "Authentication config")
+var mail = flag.Bool("mail", false, "Enable email notifications (only with authenticated mode)")
 
 var db *sql.DB
 var notif *notification.Notification
 var auth *config.AuthConfig
 var store *sessions.CookieStore
+var mailer *m.Mailer
 
 func loggingHandler(ctx *stack.Context, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +46,7 @@ func loggingHandler(ctx *stack.Context, next http.Handler) http.Handler {
 		ctx.Put("notif", notif)
 		ctx.Put("auth", auth)
 		ctx.Put("store", store)
+		ctx.Put("mailer", mailer)
 		t1 := time.Now()
 		next.ServeHTTP(w, r)
 		t2 := time.Now()
@@ -93,10 +97,11 @@ func basicauthHandler(ctx *stack.Context, next http.Handler) http.Handler {
 			for _, site := range auth.Site {
 				if site.Enabled && user == site.Username && pass == site.Password {
 					next.ServeHTTP(w, r)
-					break
+					return
 				}
 			}
 		}
+
 		log.Printf("[%s] %q %v\n", r.Method, r.URL.String(), "Authentication error")
 		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -167,6 +172,10 @@ func main() {
 		}
 
 		store = sessions.NewCookieStore(salt)
+
+		if *mail {
+			mailer = m.NewMailer()
+		}
 	}
 
 	router := violetear.New()

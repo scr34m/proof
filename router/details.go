@@ -1,13 +1,9 @@
 package router
 
 import (
-	"bytes"
-	"compress/zlib"
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"html/template"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"sort"
@@ -16,6 +12,7 @@ import (
 	"time"
 
 	"github.com/alexedwards/stack"
+	"github.com/scr34m/proof/parser"
 )
 
 func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
@@ -23,16 +20,6 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(r.URL.Path, "/")
 
 	db := ctx.Get("db").(*sql.DB)
-
-	type frame struct {
-		AbsPath     string
-		Function    string
-		LineNo      float64
-		PreContext  []string
-		Context     string
-		PostContext []string
-		Vars        template.HTML
-	}
 
 	type request struct {
 		Name      string
@@ -51,7 +38,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		ServerName string
 		Platform   string
 		Site       string
-		Frames     []frame
+		Frames     []parser.Frame
 		Request    []request
 		User       map[string]string
 	}
@@ -73,7 +60,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	m, err := decode(d.Data)
+	m, err := parser.Decode(d.Data)
 	if err != nil {
 		panic(err)
 	}
@@ -83,7 +70,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 
 		_v := v.(map[string]interface{})
 
-		f := frame{
+		f := parser.Frame{
 			AbsPath:  _v["abs_path"].(string),
 			Function: _v["function"].(string),
 			LineNo:   _v["lineno"].(float64),
@@ -215,30 +202,4 @@ func formatVarsMap(m map[string]interface{}) string {
 		content += `</tr>`
 	}
 	return content
-}
-
-func decode(payload string) (map[string]interface{}, error) {
-	c, _ := base64.StdEncoding.DecodeString(payload)
-
-	b := bytes.NewBufferString(string(c))
-
-	z, err := zlib.NewReader(b)
-	if err != nil {
-		return nil, err
-	}
-	defer z.Close()
-
-	p, err := ioutil.ReadAll(z)
-	if err != nil {
-		return nil, err
-	}
-
-	var x map[string]interface{}
-
-	err = json.Unmarshal(p, &x)
-	if err != nil {
-		return nil, err
-	}
-
-	return x, err
 }

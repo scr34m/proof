@@ -14,7 +14,6 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/scr34m/proof/notification"
 )
 
 type Sentry struct {
@@ -26,6 +25,7 @@ type Sentry struct {
 }
 
 type A []interface{}
+
 type M map[string]interface{}
 
 type Packet struct {
@@ -72,7 +72,7 @@ func (s *Sentry) Load(payload string) error {
 	return nil
 }
 
-func (s *Sentry) Process(notif *notification.Notification) error {
+func (s *Sentry) Process() (*ProcessStatus, error) {
 	// https://stackoverflow.com/questions/13331973/how-does-sentry-aggregate-errors
 
 	// https://github.com/getsentry/sentry/blob/master/src/sentry/interfaces/user.py
@@ -102,28 +102,39 @@ func (s *Sentry) Process(notif *notification.Notification) error {
 		log.Println(err)
 	}
 
-	stmt, err := s.Database.Prepare("SELECT id FROM `group` WHERE checksum = ? AND project_id = ?")
+	stmt, err := s.Database.Prepare("SELECT id, status FROM `group` WHERE checksum = ? AND project_id = ?")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer stmt.Close()
 
 	var groupId int64
+	var status int64
+	var new bool
+	var regression bool
 
-	err = stmt.QueryRow(checksum, s.Packet.Project).Scan(&groupId)
+	err = stmt.QueryRow(checksum, s.Packet.Project).Scan(&groupId, &status)
 	if err == nil {
+		new = false
+
+		if status != 0 {
+			regression = true
+		}
+
 		stmt, err := s.Database.Prepare("UPDATE `group` SET last_seen = ?, seen = seen + 1, status = 0 WHERE id = ?")
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer stmt.Close()
 
 		_, err = stmt.Exec(lastSeen, groupId)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else {
 		seen := 1
+		new = true
+		regression = false
 
 		view := ""
 		if s.Packet.InterfaceHttp["url"] != nil {
@@ -132,44 +143,58 @@ func (s *Sentry) Process(notif *notification.Notification) error {
 
 		stmt, err := s.Database.Prepare("INSERT INTO `group` (logger, `level`, message, checksum, seen, last_seen, first_seen, project_id, `server_name`, url, site, platform, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)")
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer stmt.Close()
 
 		res, err := stmt.Exec(s.Packet.Logger, s.Packet.Level, s.Packet.Message, checksum, seen, lastSeen, lastSeen, s.Packet.Project,
 			s.Packet.ServerName, view, s.Packet.Site, s.Packet.Platform)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		groupId, err = res.LastInsertId()
 		if err != nil {
-			return err
+			return nil, err
 		}
-	}
-
-	if notif != nil {
-		notif.Ping(groupId, s.Packet.Message, s.Packet.ServerName, s.Packet.Level)
 	}
 
 	stmt, err = s.Database.Prepare("INSERT INTO event (data_id, group_id, message, checksum) VALUES (?, ?, ?, ?)")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	_, err = stmt.Exec(s.hash, groupId, s.Packet.Message, checksum)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	// TODO store own custom format
 
 	err = s.storeData(lastSeen)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return err
+	// Decode payload to get stacktrace
+	m, err := Decode(s.payload)
+	if err != nil {
+		return nil, err
+	}
+
+	var frames []Frame
+	trace := m["sentry.interfaces.Stacktrace"].(map[string]interface{})
+	for _, v := range trace["frames"].([]interface{}) {
+		_v := v.(map[string]interface{})
+		f := Frame{
+			AbsPath:  _v["abs_path"].(string),
+			Function: _v["function"].(string),
+			LineNo:   _v["lineno"].(float64),
+			Context:  strings.Replace(_v["context_line"].(string), " ", "\u00A0", -1),
+		}
+		frames = append(frames, f)
+	}
+
+	ps := &ProcessStatus{GroupId: groupId, Message: s.Packet.Message, ServerName: s.Packet.ServerName, Level: s.Packet.Level, IsNew: new, IsRegression: regression, Frames: frames}
+	return ps, nil
 }
 
 func (s *Sentry) storeData(lastSeen time.Time) error {
