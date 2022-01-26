@@ -10,6 +10,6 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.7
 	github.com/nbari/violetear v0.0.0-20210524103009-ce83b52538c9
 	github.com/scr34m/gosx-notifier v0.0.0-20171028061049-1e2edd800ab5
-	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )

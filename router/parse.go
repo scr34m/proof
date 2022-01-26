@@ -38,12 +38,12 @@ func Parser(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 
 	mailer := ctx.Get("mailer").(*mail.Mailer)
 	if mailer != nil && (status.IsNew || status.IsRegression) {
-	}
-	var recipients []string
-	for _, user := range auth.User {
-		if user.Enabled {
-			recipients = append(recipients, user.Email)
+		var recipients []string
+		for _, user := range auth.User {
+			if user.Enabled {
+				recipients = append(recipients, user.Email)
+			}
 		}
+		mailer.Event(recipients, status)
 	}
-	mailer.Event(recipients, status)
 }
