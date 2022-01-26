@@ -20,16 +20,16 @@ import (
 	r "github.com/scr34m/proof/router"
 )
 
-var databaseType = flag.String("type", "sqlite", "database driver type (mysql|sqlite)")
-var databaseHost = flag.String("host", "127.0.0.1", "database host")
-var databasePort = flag.Int("port", 3306, "database port")
-var databaseUsername = flag.String("username", "", "database user")
-var databasePassword = flag.String("password", "", "database password")
-var databaseName = flag.String("database", "proof.db", "database name or file")
+var databaseType = flag.String("database-type", "sqlite", "Database type (mysql|sqlite)")
+var databaseHost = flag.String("database-host", "127.0.0.1", "Database host")
+var databasePort = flag.Int("database-port", 3306, "Database port")
+var databaseUser = flag.String("database-user", "", "Database user")
+var databasePassword = flag.String("database-password", "", "Database password")
+var databaseName = flag.String("database", "proof.db", "Database name or file")
 var listen = flag.String("listen", ":2017", "Location to listen for connections")
 var notificationShow = flag.Bool("notification", true, "Local notification (only OSX)")
 var authMode = flag.Bool("auth", false, "Authenticated mode")
-var authDatabase = flag.String("authdatabase", "proof.toml", "Authentication config")
+var authDatabase = flag.String("auth-database", "proof.toml", "Authentication config")
 var mail = flag.Bool("mail", false, "Enable email notifications (only with authenticated mode)")
 var sessionKey = flag.String("sessionkey", "", "Use custom key to encrypt cookie")
 
@@ -130,12 +130,12 @@ func main() {
 	if *databaseType == "mysql" {
 		var dsn = ""
 
-		if *databaseUsername != "" && *databasePassword != "" {
-			dsn += *databaseUsername
+		if *databaseUser != "" && *databasePassword != "" {
+			dsn += *databaseUser
 			dsn += ":" + *databasePassword
 			dsn += "@"
-		} else if *databaseUsername != "" {
-			dsn += *databaseUsername + "@"
+		} else if *databaseUser != "" {
+			dsn += *databaseUser + "@"
 		}
 		dsn += "tcp(" + *databaseHost + ":" + strconv.Itoa(*databasePort) + ")"
 		dsn += "/" + *databaseName

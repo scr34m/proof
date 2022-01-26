@@ -1,12 +1,7 @@
-Minimal Sentry alternative / drop-in replacement for development / local use, easy install with out any extra dependencies.
+Minimal Sentry alternative / drop-in replacement
 ===
 
-Sentry configuration
-===
-
-```
-$client = new Raven_Client('http://any:data@10.33.214.1:2017/track/1');
-```
+Ideal for local development or small teams to monitor application error reports.
 
 Auth mode configuration file
 ===

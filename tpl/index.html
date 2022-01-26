@@ -5,7 +5,7 @@
         <th class="left aligned">Seen</th>
         <th class="left aligned">Message</th>
         <th class="left aligned">Last seen</th>
-        <th class="left aligned">Site</th>
+        <th class="left aligned">Project</th>
         <th class="left aligned">Server name</th>
         <th></th>
     </tr>
@@ -16,7 +16,7 @@
         <td class="left aligned">{{ .Seen }}</td>
         <td class="left aligned"><a href="/details/{{ .Id }}">{{ .Message }}</a></td>
         <td class="left aligned">{{ .LastSeen }}</td>
-        <td class="left aligned">{{ .Seen }}</td>
+        <td class="left aligned">{{ .Project }}</td>
         <td class="left aligned">{{ .ServerName }}</td>
         <td><button class="ui icon button acknowledge" data-id="{{ .Id }}"><i class="checkmark icon"></i></button></td>
     </tr>
