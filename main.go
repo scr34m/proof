@@ -1,10 +1,8 @@
 package main
 
 import (
-	"crypto/rand"
 	"database/sql"
 	"flag"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -33,6 +31,7 @@ var notificationShow = flag.Bool("notification", true, "Local notification (only
 var authMode = flag.Bool("auth", false, "Authenticated mode")
 var authDatabase = flag.String("authdatabase", "proof.toml", "Authentication config")
 var mail = flag.Bool("mail", false, "Enable email notifications (only with authenticated mode)")
+var sessionKey = flag.String("sessionkey", "", "Use custom key to encrypt cookie")
 
 var db *sql.DB
 var notif *notification.Notification
@@ -165,13 +164,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		salt := make([]byte, config.PW_SALT_BYTES)
-		_, err := io.ReadFull(rand.Reader, salt)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		store = sessions.NewCookieStore(salt)
+		store = sessions.NewCookieStore([]byte(*sessionKey))
 
 		if *mail {
 			mailer = m.NewMailer()
