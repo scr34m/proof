@@ -98,41 +98,45 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 
 	var keys []string
 
-	http := m["sentry.interfaces.Http"].(map[string]interface{})
-	for k, _ := range http {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		v := http[key]
-		r := request{Name: key}
-		if reflect.TypeOf(v).Kind() == reflect.String {
-			r.Value = v.(string)
-		} else {
-			var keys2 []string
-			for k2, _ := range v.(map[string]interface{}) {
-				keys2 = append(keys2, k2)
-			}
-			sort.Strings(keys2)
-
-			for _, key2 := range keys2 {
-				b, _ := json.Marshal(v.(map[string]interface{})[key2])
-				r.ValueList = append(r.ValueList, request{Name: key2, Value: string(b)})
-			}
+	if m["sentry.interfaces.Http"] != nil {
+		http := m["sentry.interfaces.Http"].(map[string]interface{})
+		for k, _ := range http {
+			keys = append(keys, k)
 		}
-		d.Request = append(d.Request, r)
+		sort.Strings(keys)
+		for _, key := range keys {
+			v := http[key]
+			r := request{Name: key}
+			if reflect.TypeOf(v).Kind() == reflect.String {
+				r.Value = v.(string)
+			} else {
+				var keys2 []string
+				for k2, _ := range v.(map[string]interface{}) {
+					keys2 = append(keys2, k2)
+				}
+				sort.Strings(keys2)
+
+				for _, key2 := range keys2 {
+					b, _ := json.Marshal(v.(map[string]interface{})[key2])
+					r.ValueList = append(r.ValueList, request{Name: key2, Value: string(b)})
+				}
+			}
+			d.Request = append(d.Request, r)
+		}
 	}
 
-	d.User = make(map[string]string)
-	user := m["sentry.interfaces.User"].(map[string]interface{})
-	keys = nil
-	for k, _ := range user {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		b, _ := json.Marshal(user[key])
-		d.User[key] = string(b)
+	if m["sentry.interfaces.User"] != nil {
+		d.User = make(map[string]string)
+		user := m["sentry.interfaces.User"].(map[string]interface{})
+		keys = nil
+		for k, _ := range user {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			b, _ := json.Marshal(user[key])
+			d.User[key] = string(b)
+		}
 	}
 
 	templates := template.Must(template.ParseFiles("tpl/layout.html", "tpl/details.html"))
