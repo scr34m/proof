@@ -182,6 +182,7 @@ func main() {
 	router.Handle("/status/:any", stk.Then(r.Status), "GET")
 	router.Handle("/acknowledge/:num/:num", stk.Then(r.Acknowledge), "POST")
 	router.Handle("/details/:num", stk.Then(r.Details), "GET")
+	router.Handle("/details/:num/:num", stk.Then(r.Details), "GET")
 
 	stk_basic := stack.New(loggingHandler, basicauthHandler, recoverHandler)
 

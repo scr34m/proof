@@ -8,11 +8,22 @@
 <h2>Tags</h2>
 
 <p>
-<div class="ui label"><strong>level</strong> = {{ .Level }}</div>
-<div class="ui label"><strong>logger</strong> = {{ .Logger }}</div>
-<div class="ui label"><strong>server_name</strong> = {{ .ServerName }}</div>
-<div class="ui label"><strong>platform</strong> = {{ .Platform }}</div>
-<div class="ui label"><strong>site</strong> = {{ .Site }}</div>
+    <div class="ui label"><strong>seen</strong> = {{ .Seen }}</div>
+    <div class="ui label"><strong>level</strong> = {{ .Level }}</div>
+    <div class="ui label"><strong>logger</strong> = {{ .Logger }}</div>
+    <div class="ui label"><strong>server_name</strong> = {{ .ServerName }}</div>
+    <div class="ui label"><strong>site</strong> = {{ .Site }}</div>
+    <div class="ui label"><strong>at</strong> = {{ .Time }}</div>
+    {{ if .NewerId }}
+    <a href="/details/{{ .GroupId }}/{{ .NewerId }}" class="mini ui primary button right floated">Newer</a>
+    {{ else }}
+    <a class="mini ui disabled primary button right floated">Newer</a>
+    {{ end }}
+    {{ if .OlderId }}
+    <a href="/details/{{ .GroupId }}/{{ .OlderId }}" class="mini ui primary button right floated">Older</a>
+    {{ else }}
+    <a class="mini ui disabled primary button right floated">Older</a>
+    {{ end }}
 </p>
 
 <h2>Exception</h2>
@@ -33,6 +44,7 @@
 </div>
 {{end}}
 
+{{ if .Request }}
 <h2>Request</h2>
 
 <table class="ui striped right aligned table">
@@ -62,7 +74,9 @@
     </tr>
     {{end}}
 </table>
+{{end}}
 
+{{ if .User }}
 <h2>User</h2>
 
 <table class="ui striped right aligned table">
@@ -73,6 +87,7 @@
     </tr>
     {{end}}
 </table>
+{{end}}
 
 <script type="text/javascript">
     appCode.push(function () {

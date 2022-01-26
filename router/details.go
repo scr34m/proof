@@ -28,8 +28,13 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	type data struct {
+		GroupId    string
+		CurrentId  string
+		OlderId    int64
+		NewerId    int64
 		Menu       string
 		MenuLink   string
+		Seen       int64
 		Time       string
 		Message    string
 		Data       string
@@ -45,18 +50,54 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 
 	d := data{}
 	d.Menu = "details"
-	d.MenuLink = r.URL.Path
-
+	d.MenuLink = "/details/" + parts[2]
+	d.GroupId = parts[2]
 	d.Time = time.Now().Format("2006-01-02 15:04:05")
 
-	stmt, err := db.Prepare("SELECT d.data, e.message, g.level, g.logger, g.server_name, g.platform, g.site FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ?")
+	// Read the latest event from the group
+	var params []interface{}
+
+	query := "SELECT d.data, e.message, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? ORDER BY e.id DESC LIMIT 1"
+	params = append(params, d.GroupId)
+
+	if len(parts) == 4 {
+		d.CurrentId = parts[3]
+		params = append(params, d.CurrentId)
+		query = "SELECT d.data, e.message, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? AND e.id = ?"
+	}
+
+	stmt, err := db.Prepare(query)
 	if err != nil {
 		panic(err)
 	}
 	defer stmt.Close()
 
-	err = stmt.QueryRow(parts[2]).Scan(&d.Data, &d.Message, &d.Level, &d.Logger, &d.ServerName, &d.Platform, &d.Site)
+	err = stmt.QueryRow(params...).Scan(&d.Data, &d.Message, &d.CurrentId, &d.Level, &d.Logger, &d.ServerName, &d.Platform, &d.Site, &d.Seen)
 	if err != nil {
+		panic(err)
+	}
+
+	// Older event from the group
+	stmt, err = db.Prepare("SELECT e.id FROM `group` g LEFT JOIN event e ON g.id = e.group_id WHERE g.id = ? AND e.id < ? ORDER BY e.id DESC LIMIT 1")
+	if err != nil {
+		panic(err)
+	}
+	defer stmt.Close()
+
+	err = stmt.QueryRow(d.GroupId, d.CurrentId).Scan(&d.OlderId)
+	if err != nil && err != sql.ErrNoRows {
+		panic(err)
+	}
+
+	// Newer event from the group
+	stmt, err = db.Prepare("SELECT e.id FROM `group` g LEFT JOIN event e ON g.id = e.group_id WHERE g.id = ? AND e.id > ? ORDER BY e.id ASC LIMIT 1")
+	if err != nil {
+		panic(err)
+	}
+	defer stmt.Close()
+
+	err = stmt.QueryRow(d.GroupId, d.CurrentId).Scan(&d.NewerId)
+	if err != nil && err != sql.ErrNoRows {
 		panic(err)
 	}
 
