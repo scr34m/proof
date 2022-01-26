@@ -1,11 +1,13 @@
 package router
 
 import (
+	"context"
 	"database/sql"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/alexedwards/stack"
+	"github.com/go-redis/redis/v8"
 	"github.com/scr34m/proof/config"
 	"github.com/scr34m/proof/mail"
 	"github.com/scr34m/proof/notification"
@@ -18,13 +20,18 @@ func Parser(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	s := parser.Sentry{Database: ctx.Get("db").(*sql.DB)}
-	err = s.Load(string(body))
-	if err != nil {
-		panic(err)
+	if ctx.Get("queue").(bool) {
+		c := ctx.Get("ctx").(context.Context)
+		redis := ctx.Get("redis").(*redis.Client)
+
+		err := redis.LPush(c, config.REDIS_CHANNEL, body, 0).Err()
+		if err != nil {
+			panic(err)
+		}
+		return
 	}
 
-	status, err := s.Process()
+	status, err := ProcessBody(ctx.Get("db").(*sql.DB), ctx.Get("auth").(*config.AuthConfig), ctx.Get("mailer").(*mail.Mailer), string(body))
 	if err != nil {
 		panic(err)
 	}
@@ -33,10 +40,20 @@ func Parser(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	if notif != nil && (status.IsNew || status.IsRegression) {
 		notif.Ping(status.GroupId, status.Message, status.ServerName, status.Level)
 	}
+}
 
-	auth := ctx.Get("auth").(*config.AuthConfig)
+func ProcessBody(db *sql.DB, auth *config.AuthConfig, mailer *mail.Mailer, body string) (*parser.ProcessStatus, error) {
+	s := parser.Sentry{Database: db}
+	err := s.Load(body)
+	if err != nil {
+		return nil, err
+	}
 
-	mailer := ctx.Get("mailer").(*mail.Mailer)
+	status, err := s.Process()
+	if err != nil {
+		return nil, err
+	}
+
 	if mailer != nil && (status.IsNew || status.IsRegression) {
 		var recipients []string
 		for _, user := range auth.User {
@@ -46,4 +63,6 @@ func Parser(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		}
 		mailer.Event(recipients, status)
 	}
+
+	return status, nil
 }

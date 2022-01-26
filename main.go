@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"flag"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/BurntSushi/toml"
+	rdb "github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/scr34m/proof/cmd"
@@ -28,12 +30,15 @@ var authMode = flag.Bool("auth", false, "Authenticated mode")
 var authDatabase = flag.String("auth-database", "proof.toml", "Authentication config")
 var mail = flag.Bool("mail", false, "Enable email notifications (only with authenticated mode)")
 var sessionKey = flag.String("sessionkey", "", "Use custom key to encrypt cookie")
+var mode = flag.String("mode", "normal", "Run mode selector (normal, worker, frontend)")
+var redis = flag.String("redis", "localhost:6379", "Redis host and port")
 
 var db *sql.DB
 var notif *notification.Notification
 var auth *config.AuthConfig
 var store *sessions.CookieStore
 var mailer *m.Mailer
+var redisCli *rdb.Client
 
 func main() {
 	log.Printf("Proof %s starting", config.VERSION)
@@ -86,6 +91,31 @@ func main() {
 		}
 	}
 
-	s := cmd.NewServe(db, notif, auth, store, mailer)
-	s.Start(*listen)
+	if *mode == "worker" || *mode == "frontend" {
+		redisCli = rdb.NewClient(&rdb.Options{
+			Addr:     *redis,
+			Password: "",
+			DB:       0,
+		})
+	}
+
+	ctx := context.Background()
+
+	// Start in worker mode
+	if *mode == "worker" {
+		c := cmd.NewWorker(ctx, db, auth, mailer, redisCli)
+		c.Start()
+		return
+	}
+
+	// Start frontend with queue decision
+	var queue bool
+	if *mode == "frontend" {
+		queue = true
+	} else {
+		queue = false
+	}
+
+	c := cmd.NewFrontend(ctx, db, notif, auth, store, mailer, redisCli, queue)
+	c.Start(*listen)
 }

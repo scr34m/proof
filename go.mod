@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/BurntSushi/toml v1.0.0
 	github.com/alexedwards/stack v0.0.0-20160719074228-3ba431d5d12d
+	github.com/go-redis/redis/v8 v8.11.4
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gorilla/sessions v1.2.1
 	github.com/mattn/go-sqlite3 v1.14.7

@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/alexedwards/stack"
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/sessions"
 	"github.com/nbari/violetear"
 	"github.com/scr34m/proof/config"
@@ -15,35 +17,41 @@ import (
 	r "github.com/scr34m/proof/router"
 )
 
-type Serve interface {
-	Start(listen string)
+type Frontend interface {
+	Start(string)
 }
 
-type serve struct {
+type frontend struct {
+	ctx    context.Context
 	db     *sql.DB
 	notif  *notification.Notification
 	auth   *config.AuthConfig
 	store  *sessions.CookieStore
 	mailer *m.Mailer
+	redis  *redis.Client
+	queue  bool
 }
 
-func NewServe(db *sql.DB, notif *notification.Notification, auth *config.AuthConfig, store *sessions.CookieStore, mailer *m.Mailer) Serve {
-	s := &serve{
+func NewFrontend(ctx context.Context, db *sql.DB, notif *notification.Notification, auth *config.AuthConfig, store *sessions.CookieStore, mailer *m.Mailer, redis *redis.Client, queue bool) Frontend {
+	f := &frontend{
+		ctx:    ctx,
 		db:     db,
 		notif:  notif,
 		auth:   auth,
 		store:  store,
 		mailer: mailer,
+		redis:  redis,
+		queue:  queue,
 	}
-	return s
+	return f
 }
 
-func (s *serve) Start(listen string) {
+func (f *frontend) Start(listen string) {
 	router := violetear.New()
 	router.AddRegex(":num", `[0-9]+`)
 	router.AddRegex(":any", `*`)
 
-	stk := stack.New(s.loggingHandler, s.sessionHandler, s.recoverHandler)
+	stk := stack.New(f.loggingHandler, f.sessionHandler, f.recoverHandler)
 
 	router.Handle("/", stk.Then(r.Index), "GET")
 	router.Handle("/login", stk.Then(r.Login), "GET, POST")
@@ -52,7 +60,7 @@ func (s *serve) Start(listen string) {
 	router.Handle("/details/:num", stk.Then(r.Details), "GET")
 	router.Handle("/details/:num/:num", stk.Then(r.Details), "GET")
 
-	stk_basic := stack.New(s.loggingHandler, s.basicauthHandler, s.recoverHandler)
+	stk_basic := stack.New(f.loggingHandler, f.basicauthHandler, f.recoverHandler)
 
 	router.Handle("/:num", stk_basic.Then(r.Parser), "POST")
 	router.Handle("/track/:num", stk_basic.Then(r.Parser), "POST")
@@ -64,13 +72,16 @@ func (s *serve) Start(listen string) {
 	log.Fatal(http.ListenAndServe(listen, router))
 }
 
-func (s *serve) loggingHandler(ctx *stack.Context, next http.Handler) http.Handler {
+func (f *frontend) loggingHandler(ctx *stack.Context, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx.Put("db", s.db)
-		ctx.Put("notif", s.notif)
-		ctx.Put("auth", s.auth)
-		ctx.Put("store", s.store)
-		ctx.Put("mailer", s.mailer)
+		ctx.Put("db", f.db)
+		ctx.Put("notif", f.notif)
+		ctx.Put("auth", f.auth)
+		ctx.Put("store", f.store)
+		ctx.Put("mailer", f.mailer)
+		ctx.Put("queue", f.queue)
+		ctx.Put("ctx", f.ctx)
+		ctx.Put("redis", f.redis)
 		t1 := time.Now()
 		next.ServeHTTP(w, r)
 		t2 := time.Now()
@@ -78,7 +89,7 @@ func (s *serve) loggingHandler(ctx *stack.Context, next http.Handler) http.Handl
 	})
 }
 
-func (s *serve) sessionHandler(ctx *stack.Context, next http.Handler) http.Handler {
+func (f *frontend) sessionHandler(ctx *stack.Context, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := ctx.Get("auth").(*config.AuthConfig)
 		if auth == nil {
@@ -86,7 +97,7 @@ func (s *serve) sessionHandler(ctx *stack.Context, next http.Handler) http.Handl
 			return
 		}
 
-		session, _ := s.store.Get(r, config.SESSION_NAME)
+		session, _ := f.store.Get(r, config.SESSION_NAME)
 		err := session.Save(r, w)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -108,7 +119,7 @@ func (s *serve) sessionHandler(ctx *stack.Context, next http.Handler) http.Handl
 	})
 }
 
-func (s *serve) basicauthHandler(ctx *stack.Context, next http.Handler) http.Handler {
+func (f *frontend) basicauthHandler(ctx *stack.Context, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := ctx.Get("auth").(*config.AuthConfig)
 		if auth == nil {
@@ -132,7 +143,7 @@ func (s *serve) basicauthHandler(ctx *stack.Context, next http.Handler) http.Han
 	})
 }
 
-func (s *serve) recoverHandler(ctx *stack.Context, next http.Handler) http.Handler {
+func (f *frontend) recoverHandler(ctx *stack.Context, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
