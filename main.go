@@ -33,8 +33,7 @@ var mailHost = flag.String("mail-host", "127.0.0.1", "SMTP server host")
 var mailPort = flag.Int("mail-port", 25, "SMTP server port")
 var mailUser = flag.String("mail-user", "", "SMTP server user")
 var mailPassword = flag.String("mail-password", "", "SMTP server password")
-var mailTLS = flag.Bool("mail-tls", false, "SMTP TLS enable")
-var mailVerify = flag.Bool("mail-verify", false, "SMTP certificate verify")
+var mailVerify = flag.Bool("mail-verify", true, "SMTP certificate verify")
 var mailFrom = flag.String("mail-from", "noreply@example.com", "E-mail from address")
 var sessionKey = flag.String("sessionkey", "", "Use custom key to encrypt cookie")
 var mode = flag.String("mode", "normal", "Run mode selector (normal, worker, frontend)")
@@ -97,7 +96,7 @@ func main() {
 		store = sessions.NewCookieStore([]byte(*sessionKey))
 
 		if *mail {
-			mailer = m.NewMailer(*mailHost, *mailPort, *mailUser, *mailPassword, *mailTLS, *mailVerify, *mailFrom)
+			mailer = m.NewMailer(*mailHost, *mailPort, *mailUser, *mailPassword, *mailVerify, *mailFrom)
 		}
 	}
 

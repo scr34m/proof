@@ -41,12 +41,6 @@ func NewWorker(ctx context.Context, db *sql.DB, auth *config.AuthConfig, mailer 
 }
 
 func (w *worker) Start() {
-	// read list
-	// process - read
-	// process - store
-	// process - notify
-	// remove
-
 	ctx, cancel := context.WithCancel(w.ctx)
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -78,6 +72,7 @@ func (w *worker) loop(ctx context.Context) error {
 			val, _ := w.redis.BRPop(w.ctx, 1*time.Second, w.redisKey).Result()
 			if val != nil {
 				if val[1] != "0" {
+					log.Println("Processing event")
 					_, err := router.ProcessBody(w.db, w.auth, w.mailer, val[1])
 					if err != nil {
 						return err

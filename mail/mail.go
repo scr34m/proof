@@ -14,23 +14,21 @@ import (
 type Mailer struct {
 	FromEmail string
 
-	Host         string
-	Port         int
-	User         string
-	Password     string
-	IsTLSEnabled bool
-	SkipVerify   bool
+	Host       string
+	Port       int
+	User       string
+	Password   string
+	SkipVerify bool
 }
 
-func NewMailer(host string, port int, user string, password string, tls bool, verify bool, from string) *Mailer {
+func NewMailer(host string, port int, user string, password string, verify bool, from string) *Mailer {
 	return &Mailer{
-		FromEmail:    from,
-		Host:         host,
-		Port:         port,
-		User:         user,
-		Password:     password,
-		IsTLSEnabled: tls,
-		SkipVerify:   verify,
+		Host:       host,
+		Port:       port,
+		User:       user,
+		Password:   password,
+		SkipVerify: verify,
+		FromEmail:  from,
 	}
 }
 
@@ -102,10 +100,7 @@ func (m *Mailer) Event(to []string, status *parser.ProcessStatus) {
 	msg.SetBody("text/html", body.String())
 
 	d := gomail.NewDialer(m.Host, m.Port, m.User, m.Password)
-
-	if m.IsTLSEnabled {
-		d.TLSConfig = &tls.Config{InsecureSkipVerify: m.SkipVerify}
-	}
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: m.SkipVerify}
 
 	if err := d.DialAndSend(msg); err != nil {
 		panic(err)
