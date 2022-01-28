@@ -41,6 +41,7 @@ var mode = flag.String("mode", "normal", "Run mode selector (normal, worker, fro
 var redis = flag.String("redis", "localhost:6379", "Redis host and port")
 var redisPassword = flag.String("redis-password", "", "Redis password")
 var redisDb = flag.Int("redis-db", 0, "Redis database id")
+var redisKey = flag.String("redis-key", "proof_events", "Redis key used to store queued events")
 
 var db *sql.DB
 var notif *notification.Notification
@@ -112,7 +113,7 @@ func main() {
 
 	// Start in worker mode
 	if *mode == "worker" {
-		c := cmd.NewWorker(ctx, db, auth, mailer, redisCli)
+		c := cmd.NewWorker(ctx, db, auth, mailer, redisCli, *redisKey)
 		c.Start()
 		return
 	}
@@ -125,6 +126,6 @@ func main() {
 		queue = false
 	}
 
-	c := cmd.NewFrontend(ctx, db, notif, auth, store, mailer, redisCli, queue)
+	c := cmd.NewFrontend(ctx, db, notif, auth, store, mailer, redisCli, *redisKey, queue)
 	c.Start(*listen)
 }

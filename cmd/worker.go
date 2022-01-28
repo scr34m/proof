@@ -20,20 +20,22 @@ type Worker interface {
 }
 
 type worker struct {
-	ctx    context.Context
-	db     *sql.DB
-	auth   *config.AuthConfig
-	mailer *m.Mailer
-	redis  *redis.Client
+	ctx      context.Context
+	db       *sql.DB
+	auth     *config.AuthConfig
+	mailer   *m.Mailer
+	redis    *redis.Client
+	redisKey string
 }
 
-func NewWorker(ctx context.Context, db *sql.DB, auth *config.AuthConfig, mailer *m.Mailer, redis *redis.Client) Worker {
+func NewWorker(ctx context.Context, db *sql.DB, auth *config.AuthConfig, mailer *m.Mailer, redis *redis.Client, redisKey string) Worker {
 	w := &worker{
-		ctx:    ctx,
-		db:     db,
-		auth:   auth,
-		mailer: mailer,
-		redis:  redis,
+		ctx:      ctx,
+		db:       db,
+		auth:     auth,
+		mailer:   mailer,
+		redis:    redis,
+		redisKey: redisKey,
 	}
 	return w
 }
@@ -73,7 +75,7 @@ func (w *worker) loop(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		default:
-			val, _ := w.redis.BRPop(w.ctx, 1*time.Second, config.REDIS_CHANNEL).Result()
+			val, _ := w.redis.BRPop(w.ctx, 1*time.Second, w.redisKey).Result()
 			if val != nil {
 				if val[1] != "0" {
 					_, err := router.ProcessBody(w.db, w.auth, w.mailer, val[1])

@@ -22,26 +22,28 @@ type Frontend interface {
 }
 
 type frontend struct {
-	ctx    context.Context
-	db     *sql.DB
-	notif  *notification.Notification
-	auth   *config.AuthConfig
-	store  *sessions.CookieStore
-	mailer *m.Mailer
-	redis  *redis.Client
-	queue  bool
+	ctx      context.Context
+	db       *sql.DB
+	notif    *notification.Notification
+	auth     *config.AuthConfig
+	store    *sessions.CookieStore
+	mailer   *m.Mailer
+	redis    *redis.Client
+	redisKey string
+	queue    bool
 }
 
-func NewFrontend(ctx context.Context, db *sql.DB, notif *notification.Notification, auth *config.AuthConfig, store *sessions.CookieStore, mailer *m.Mailer, redis *redis.Client, queue bool) Frontend {
+func NewFrontend(ctx context.Context, db *sql.DB, notif *notification.Notification, auth *config.AuthConfig, store *sessions.CookieStore, mailer *m.Mailer, redis *redis.Client, redisKey string, queue bool) Frontend {
 	f := &frontend{
-		ctx:    ctx,
-		db:     db,
-		notif:  notif,
-		auth:   auth,
-		store:  store,
-		mailer: mailer,
-		redis:  redis,
-		queue:  queue,
+		ctx:      ctx,
+		db:       db,
+		notif:    notif,
+		auth:     auth,
+		store:    store,
+		mailer:   mailer,
+		redis:    redis,
+		redisKey: redisKey,
+		queue:    queue,
 	}
 	return f
 }
@@ -81,6 +83,7 @@ func (f *frontend) loggingHandler(ctx *stack.Context, next http.Handler) http.Ha
 		ctx.Put("queue", f.queue)
 		ctx.Put("ctx", f.ctx)
 		ctx.Put("redis", f.redis)
+		ctx.Put("redisKey", f.redisKey)
 		t1 := time.Now()
 		next.ServeHTTP(w, r)
 		t2 := time.Now()

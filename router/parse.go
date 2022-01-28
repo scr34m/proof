@@ -23,8 +23,9 @@ func Parser(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	if ctx.Get("queue").(bool) {
 		c := ctx.Get("ctx").(context.Context)
 		redis := ctx.Get("redis").(*redis.Client)
+		redisKey := ctx.Get("redisKey").(string)
 
-		err := redis.LPush(c, config.REDIS_CHANNEL, body, 0).Err()
+		err := redis.LPush(c, redisKey, body, 0).Err()
 		if err != nil {
 			panic(err)
 		}

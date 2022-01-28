@@ -5,7 +5,6 @@ const (
 	SESSION_NAME    = "PROOFSESS"
 	VERSION         = "0.2"
 	COOKIE_KEY_AUTH = "auth"
-	REDIS_CHANNEL   = "events"
 )
 
 type AuthUser struct {
