@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/alexedwards/stack"
@@ -62,9 +63,9 @@ func (f *frontend) Start(listen string) {
 	router.Handle("/details/:num", stk.Then(r.Details), "GET")
 	router.Handle("/details/:num/:num", stk.Then(r.Details), "GET")
 
-	stk_basic := stack.New(f.loggingHandler, f.basicauthHandler, f.recoverHandler)
+	stk_basic := stack.New(f.loggingHandler, f.authHandler, f.recoverHandler)
 
-	router.Handle("/:num", stk_basic.Then(r.Parser), "POST")
+	router.Handle("/api/store", stk_basic.Then(r.Parser), "POST")
 	router.Handle("/track/api/store", stk_basic.Then(r.Parser), "POST")
 
 	fs := http.FileServer(http.Dir("assets"))
@@ -121,7 +122,7 @@ func (f *frontend) sessionHandler(ctx *stack.Context, next http.Handler) http.Ha
 	})
 }
 
-func (f *frontend) basicauthHandler(ctx *stack.Context, next http.Handler) http.Handler {
+func (f *frontend) authHandler(ctx *stack.Context, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := ctx.Get("auth").(*config.AuthConfig)
 		if auth == nil {
@@ -130,12 +131,20 @@ func (f *frontend) basicauthHandler(ctx *stack.Context, next http.Handler) http.
 		}
 
 		user, pass, ok := r.BasicAuth()
-		if ok {
-			for _, site := range auth.Site {
-				if site.Enabled && user == site.Username && pass == site.Password {
-					next.ServeHTTP(w, r)
-					return
-				}
+
+		for _, site := range auth.Site {
+			if !site.Enabled {
+				continue
+			}
+
+			if strings.Contains(r.Header.Get("X-Sentry-Auth"), "sentry_key="+site.Username) && strings.Contains(r.Header.Get("X-Sentry-Auth"), "sentry_secret="+site.Password) {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			if ok && user == site.Username && pass == site.Password {
+				next.ServeHTTP(w, r)
+				return
 			}
 		}
 
