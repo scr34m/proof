@@ -39,6 +39,8 @@ var mailFrom = flag.String("mail-from", "noreply@example.com", "E-mail from addr
 var sessionKey = flag.String("sessionkey", "", "Use custom key to encrypt cookie")
 var mode = flag.String("mode", "normal", "Run mode selector (normal, worker, frontend)")
 var redis = flag.String("redis", "localhost:6379", "Redis host and port")
+var redisPassword = flag.String("redis-password", "", "Redis password")
+var redisDb = flag.Int("redis-db", 0, "Redis database id")
 
 var db *sql.DB
 var notif *notification.Notification
@@ -101,8 +103,8 @@ func main() {
 	if *mode == "worker" || *mode == "frontend" {
 		redisCli = rdb.NewClient(&rdb.Options{
 			Addr:     *redis,
-			Password: "",
-			DB:       0,
+			Password: *redisPassword,
+			DB:       *redisDb,
 		})
 	}
 
