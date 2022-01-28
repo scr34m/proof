@@ -22,15 +22,15 @@ type Mailer struct {
 	SkipVerify   bool
 }
 
-func NewMailer() *Mailer {
+func NewMailer(host string, port int, user string, password string, tls bool, verify bool, from string) *Mailer {
 	return &Mailer{
-		FromEmail:    "noreply@example.com",
-		Host:         "127.0.0.1",
-		Port:         25,
-		User:         "",
-		Password:     "",
-		IsTLSEnabled: false,
-		SkipVerify:   true,
+		FromEmail:    from,
+		Host:         host,
+		Port:         port,
+		User:         user,
+		Password:     password,
+		IsTLSEnabled: tls,
+		SkipVerify:   verify,
 	}
 }
 
