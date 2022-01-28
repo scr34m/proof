@@ -63,7 +63,6 @@ func (f *frontend) Start(listen string) {
 	stk_basic := stack.New(f.loggingHandler, f.basicauthHandler, f.recoverHandler)
 
 	router.Handle("/:num", stk_basic.Then(r.Parser), "POST")
-	router.Handle("/track/:num", stk_basic.Then(r.Parser), "POST")
 	router.Handle("/track/api/store", stk_basic.Then(r.Parser), "POST")
 
 	fs := http.FileServer(http.Dir("assets"))
