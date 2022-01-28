@@ -141,7 +141,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 
 	if m["sentry.interfaces.Http"] != nil {
 		http := m["sentry.interfaces.Http"].(map[string]interface{})
-		for k, _ := range http {
+		for k := range http {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
@@ -152,7 +152,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 				r.Value = v.(string)
 			} else {
 				var keys2 []string
-				for k2, _ := range v.(map[string]interface{}) {
+				for k2 := range v.(map[string]interface{}) {
 					keys2 = append(keys2, k2)
 				}
 				sort.Strings(keys2)
@@ -170,7 +170,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		d.User = make(map[string]string)
 		user := m["sentry.interfaces.User"].(map[string]interface{})
 		keys = nil
-		for k, _ := range user {
+		for k := range user {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
