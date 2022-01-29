@@ -36,6 +36,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		MenuLink   string
 		Seen       int64
 		Time       string
+		Url        string
 		Message    string
 		Data       string
 		Level      string
@@ -57,13 +58,13 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	// Read the latest event from the group
 	var params []interface{}
 
-	query := "SELECT d.data, e.message, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? ORDER BY e.id DESC LIMIT 1"
+	query := "SELECT d.data, e.message, g.url, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? ORDER BY e.id DESC LIMIT 1"
 	params = append(params, d.GroupId)
 
 	if len(parts) == 4 {
 		d.CurrentId = parts[3]
 		params = append(params, d.CurrentId)
-		query = "SELECT d.data, e.message, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? AND e.id = ?"
+		query = "SELECT d.data, e.message, g.url, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? AND e.id = ?"
 	}
 
 	stmt, err := db.Prepare(query)
@@ -72,7 +73,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer stmt.Close()
 
-	err = stmt.QueryRow(params...).Scan(&d.Data, &d.Message, &d.CurrentId, &d.Level, &d.Logger, &d.ServerName, &d.Platform, &d.Site, &d.Seen)
+	err = stmt.QueryRow(params...).Scan(&d.Data, &d.Message, &d.Url, &d.CurrentId, &d.Level, &d.Logger, &d.ServerName, &d.Platform, &d.Site, &d.Seen)
 	if err != nil {
 		panic(err)
 	}

@@ -42,3 +42,6 @@ tr.acknowledged td {
 .hidden {
     display: none !important;
 }
+.break {
+    word-break: break-all;
+}

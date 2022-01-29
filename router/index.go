@@ -13,7 +13,7 @@ func Index(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 
 	db := ctx.Get("db").(*sql.DB)
 
-	rows, err := db.Query("SELECT id, seen, message, last_seen, site, server_name, project_id FROM `group` WHERE status = 0 ORDER BY last_seen DESC")
+	rows, err := db.Query("SELECT id, seen, url, message, last_seen, site, server_name, project_id FROM `group` WHERE status = 0 ORDER BY last_seen DESC")
 	if err != nil {
 		panic(err)
 	}
@@ -21,6 +21,7 @@ func Index(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	type event struct {
 		Id         int
 		Seen       int
+		Url        string
 		Message    string
 		LastSeen   string
 		Site       string
@@ -32,7 +33,7 @@ func Index(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		event := event{}
-		err = rows.Scan(&event.Id, &event.Seen, &event.Message, &event.LastSeen, &event.Site, &event.ServerName, &event.Project)
+		err = rows.Scan(&event.Id, &event.Seen, &event.Url, &event.Message, &event.LastSeen, &event.Site, &event.ServerName, &event.Project)
 		if err != nil {
 			panic(err)
 		}

@@ -1,8 +1,7 @@
 {{define "content"}}
+
 <div class="ui message">
-    <p>
     <pre>{{ .Message }}</pre>
-    </p>
 </div>
 
 <h2>Tags</h2>
@@ -12,8 +11,8 @@
     <div class="ui label"><strong>level</strong> = {{ .Level }}</div>
     <div class="ui label"><strong>logger</strong> = {{ .Logger }}</div>
     <div class="ui label"><strong>server_name</strong> = {{ .ServerName }}</div>
-    <div class="ui label"><strong>site</strong> = {{ .Site }}</div>
     <div class="ui label"><strong>at</strong> = {{ .Time }}</div>
+    <div class="ui label"><strong>url</strong> = {{ .Url }}</div>
     {{ if .NewerId }}
     <a href="/details/{{ .GroupId }}/{{ .NewerId }}" class="mini ui primary button right floated">Newer</a>
     {{ else }}
@@ -57,7 +56,7 @@
                 {{range $k2, $request2 := $request.ValueList}}
                 <tr>
                     <td class="left aligned two wide"><strong>{{ $request2.Name }}</strong></td>
-                    <td class="left aligned">{{ $request2.Value }}</td>
+                    <td class="left aligned break">{{ $request2.Value }}</td>
                 </tr>
                 {{end}}
                 <tr>
@@ -83,7 +82,7 @@
     {{range $k, $v := .User}}
     <tr>
         <td class="left aligned two wide"><strong>{{ $k }}</strong></td>
-        <td class="left aligned">{{ $v }}</td>
+        <td class="left aligned break">{{ $v }}</td>
     </tr>
     {{end}}
 </table>
