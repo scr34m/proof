@@ -17,6 +17,7 @@ type Parser interface {
 type ProcessStatus struct {
 	GroupId      int64
 	Message      string
+	Site         string
 	ServerName   string
 	Level        string
 	Frames       []Frame

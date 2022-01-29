@@ -41,6 +41,7 @@ var redis = flag.String("redis", "localhost:6379", "Redis host and port")
 var redisPassword = flag.String("redis-password", "", "Redis password")
 var redisDb = flag.Int("redis-db", 0, "Redis database id")
 var redisKey = flag.String("redis-key", "proof_events", "Redis key used to store queued events")
+var url = flag.String("url", "http://localhost:2017", "Frontend URL")
 
 var db *sql.DB
 var notif *notification.Notification
@@ -96,7 +97,7 @@ func main() {
 		store = sessions.NewCookieStore([]byte(*sessionKey))
 
 		if *mail {
-			mailer = m.NewMailer(*mailHost, *mailPort, *mailUser, *mailPassword, *mailVerify, *mailFrom)
+			mailer = m.NewMailer(*mailHost, *mailPort, *mailUser, *mailPassword, *mailVerify, *mailFrom, *url)
 		}
 	}
 

@@ -193,7 +193,7 @@ func (s *Sentry) Process() (*ProcessStatus, error) {
 		frames = append(frames, f)
 	}
 
-	ps := &ProcessStatus{GroupId: groupId, Message: s.Packet.Message, ServerName: s.Packet.ServerName, Level: s.Packet.Level, IsNew: new, IsRegression: regression, Frames: frames}
+	ps := &ProcessStatus{GroupId: groupId, Message: s.Packet.Message, ServerName: s.Packet.ServerName, Site: s.Packet.Site, Level: s.Packet.Level, IsNew: new, IsRegression: regression, Frames: frames}
 	return ps, nil
 }
 

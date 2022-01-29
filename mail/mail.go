@@ -12,16 +12,16 @@ import (
 )
 
 type Mailer struct {
-	FromEmail string
-
 	Host       string
 	Port       int
 	User       string
 	Password   string
 	SkipVerify bool
+	FromEmail  string
+	SiteUrl    string
 }
 
-func NewMailer(host string, port int, user string, password string, verify bool, from string) *Mailer {
+func NewMailer(host string, port int, user string, password string, verify bool, from string, siteUrl string) *Mailer {
 	return &Mailer{
 		Host:       host,
 		Port:       port,
@@ -29,13 +29,14 @@ func NewMailer(host string, port int, user string, password string, verify bool,
 		Password:   password,
 		SkipVerify: verify,
 		FromEmail:  from,
+		SiteUrl:    siteUrl,
 	}
 }
 
 func (m *Mailer) Event(to []string, status *parser.ProcessStatus) {
 	msg := gomail.NewMessage()
 
-	subject := "[Proof] " + status.ServerName + " - " + strings.ToUpper(status.Level) + ": " + status.Message
+	subject := "[Proof] " + status.Site + " - " + strings.ToUpper(status.Level) + ": " + status.Message
 	if len(subject) > 80 {
 		subject = subject[:80]
 	}
@@ -91,7 +92,7 @@ func (m *Mailer) Event(to []string, status *parser.ProcessStatus) {
 		Stacktrace string
 	}{
 		Event:      event,
-		DetailsUrl: fmt.Sprintf("/details/%d/", status.GroupId),
+		DetailsUrl: fmt.Sprintf("%s/details/%d", m.SiteUrl, status.GroupId),
 		Site:       status.ServerName,
 		Message:    status.Message,
 		Stacktrace: stacktrace,
