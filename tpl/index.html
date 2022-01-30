@@ -13,9 +13,9 @@
     {{range $event := .Events}}
     <tr>
         <td class="left aligned">{{ .Seen }}</td>
-        <td class="left aligned"><a href="/details/{{ .Id }}">{{ .Url }}</a><br />{{ .Message }}</td>
+        <td class="left aligned"><a href="/details/{{ .Id }}">{{ .UrlOrMessageShort }}</a><p>{{ .Message }}</p></td>
         <td class="left aligned">{{ .LastSeen }}</td>
-        <td class="left aligned">{{ .Site }}</td>
+        <td class="left aligned">{{ .SiteOrServerName }}</td>
         <td><button class="ui icon button acknowledge" data-id="{{ .Id }}"><i class="checkmark icon"></i></button></td>
     </tr>
     {{end}}

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"html/template"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/alexedwards/stack"
@@ -19,14 +20,16 @@ func Index(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	type event struct {
-		Id         int
-		Seen       int
-		Url        string
-		Message    string
-		LastSeen   string
-		Site       string
-		ServerName string
-		Project    string
+		Id                int
+		Seen              int
+		Url               string
+		Message           string
+		UrlOrMessageShort string
+		LastSeen          string
+		Site              string
+		ServerName        string
+		SiteOrServerName  string
+		Project           string
 	}
 
 	var events []event
@@ -37,6 +40,24 @@ func Index(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
+
+		if event.Url != "" {
+			event.UrlOrMessageShort = event.Url
+		} else {
+			index := strings.Index(event.Message, "\n")
+			if index != -1 {
+				event.UrlOrMessageShort = event.Message[:index]
+			} else {
+				event.UrlOrMessageShort = event.Message
+			}
+		}
+
+		if event.Site != "" {
+			event.SiteOrServerName = event.Site
+		} else {
+			event.SiteOrServerName = event.ServerName
+		}
+
 		events = append(events, event)
 	}
 
