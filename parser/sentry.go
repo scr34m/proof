@@ -72,30 +72,135 @@ func (s *Sentry) Load(payload string) error {
 	return nil
 }
 
-func (s *Sentry) Process() (*ProcessStatus, error) {
-	// https://stackoverflow.com/questions/13331973/how-does-sentry-aggregate-errors
-
-	// https://github.com/getsentry/sentry/blob/master/src/sentry/interfaces/user.py
-	// ignore hash sentry.interfaces.User
-
-	// https://github.com/getsentry/sentry/blob/master/src/sentry/interfaces/http.py
+/**
+ * https://stackoverflow.com/questions/13331973/how-does-sentry-aggregate-errors
+ * https://github.com/getsentry/sentry/blob/6.4.4/src/sentry/interfaces.py
+ * https://github.com/getsentry/sentry/blob/6.4.4/src/sentry/data/samples/python.json
+ */
+func (s *Sentry) GetChecksum() string {
+	// ignore sentry.interfaces.User
 	// ignore sentry.interfaces.Http
 
-	content := ""
+	/*
+	   class Interface(object):
 
-	// https://github.com/getsentry/sentry/blob/master/src/sentry/interfaces/exception.py
-	// sentry.interfaces.Exception
-	if len(s.Packet.InterfaceException) > 0 {
-		content += getContentException(s.Packet.InterfaceException)
-	}
+	   def get_composite_hash(self, interfaces):
+	   	return self.get_hash()
 
-	// https://github.com/getsentry/sentry/blob/master/src/sentry/interfaces/stacktrace.py
+	   def get_hash(self):
+	   	return []
+	*/
+
 	// sentry.interfaces.Stacktrace
-	if len(s.Packet.InterfaceStacktrace) > 0 {
-		content += getContentStacktrace(s.Packet.InterfaceStacktrace)
+	/*
+		class Stacktrace(Interface):
+		    >>> {
+		    >>>     "frames": [{
+		    >>>         "abs_path": "/real/file/name.py"
+		    >>>         "filename": "file/name.py",
+		    >>>         "function": "myfunction",
+		    >>>         "vars": {
+		    >>>             "key": "value"
+		    >>>         },
+		    >>>         "pre_context": [
+		    >>>             "line1",
+		    >>>             "line2"
+		    >>>         ],
+		    >>>         "context_line": "line3",
+		    >>>         "lineno": 3,
+		    >>>         "in_app": true,
+		    >>>         "post_context": [
+		    >>>             "line4",
+		    >>>             "line5"
+		    >>>         ],
+		    >>>     }],
+		    >>>     "frames_omitted": [13, 56]
+		    >>> }
+
+		    def get_composite_hash(self, interfaces):
+		        output = self.get_hash()
+		        if 'sentry.interfaces.Exception' in interfaces:
+		            exc = interfaces['sentry.interfaces.Exception'][0]
+		            if exc.type:
+		                output.append(exc.type)
+		            elif not output:
+		                output = exc.get_hash()
+		        return output
+
+		    def get_hash(self):
+		        output = []
+		        for frame in self.frames:
+		            output.extend(frame.get_hash())
+		        return output
+	*/
+	/*
+		class Frame(object):
+
+		def get_hash(self):
+			output = []
+			if self.module:
+				output.append(self.module)
+			elif self.filename and not self.is_url():
+				output.append(self.filename)
+
+			if self.context_line is not None:
+				output.append(self.context_line)
+			elif not output:
+				# If we were unable to achieve any context at this point
+				# (likely due to a bad JavaScript error) we should just
+				# bail on recording this frame
+				return output
+			elif self.function:
+				output.append(self.function)
+			elif self.lineno is not None:
+				output.append(self.lineno)
+			return output
+	*/
+
+	// sentry.interfaces.Exception
+	/*
+		class SingleException(Interface):
+
+			>>>  {
+			>>>     "type": "ValueError",
+			>>>     "value": "My exception value",
+			>>>     "module": "__builtins__"
+			>>>     "stacktrace": {
+			>>>         # see sentry.interfaces.Stacktrace
+			>>>     }
+			>>> }
+
+		def get_hash(self):
+			output = None
+			if self.stacktrace:
+				output = self.stacktrace.get_hash()
+				if output and self.type:
+					output.append(self.type)
+			if not output:
+				output = filter(bool, [self.type, self.value])
+			return output
+	*/
+	if s.Packet.InterfaceStacktrace != nil {
+		content := getContentStacktrace(s.Packet.InterfaceStacktrace)
+		if s.Packet.InterfaceException != nil {
+			content += s.Packet.InterfaceException["type"].(string)
+		}
+		return GetMD5Hash(content)
 	}
 
-	checksum := GetMD5Hash(content)
+	if s.Packet.InterfaceException != nil {
+		content := ""
+		content += s.Packet.InterfaceException["type"].(string)
+		content += s.Packet.InterfaceException["value"].(string)
+		return GetMD5Hash(content)
+	}
+
+	return GetMD5Hash(s.Packet.Message)
+}
+
+func (s *Sentry) Process() (*ProcessStatus, error) {
+
+	checksum := s.GetChecksum()
 
 	lastSeen, err := time.Parse(time.RFC3339, s.Packet.Timestamp)
 	if err != nil {
@@ -224,79 +329,28 @@ func (s *Sentry) storeData(lastSeen time.Time) error {
 	return nil
 }
 
-func getContentException(m M) string {
+func getContentStacktrace(m M) string {
 	output := ""
-
-	// XXX stacktrace ignored
-	output += m["type"].(string)
-	output += m["value"].(string)
-
-	/*
-		Exception
-			def get_hash(self, platform=None, system_frames=True):
-				# optimize around the fact that some exceptions might have stacktraces
-				# while others may not and we ALWAYS want stacktraces over values
-				output = []
-				for value in self.values:
-					if not value.stacktrace:
-						continue
-					stack_hash = value.stacktrace.get_hash(
-						platform=platform,
-						system_frames=system_frames,
-					)
-					if stack_hash:
-						output.extend(stack_hash)
-						output.append(value.type)
-
-				if not output:
-					for value in self.values:
-						output.extend(value.get_hash(platform=platform))
-
-				return output
-	*/
+	for _, frame := range m["frames"].([]interface{}) {
+		output += getContentFrame(frame.(map[string]interface{}))
+	}
 	return output
 }
 
 func getContentFrame(m M) string {
 	output := ""
-	if m["filename"].(string) == "[native code]" {
-		log.Printf(output)
-		return output
-	}
 	if m["module"] != nil {
 		output += m["module"].(string)
-	} else if m["filename"] != nil && !isUrl(m["filename"].(string)) { // XXX ignored is_caused_by
+	} else if m["filename"] != nil && !isUrl(m["filename"].(string)) {
 		output += m["filename"].(string)
 	}
-	// XXX context_line simplified
-	if m["context_line"] != nil && len(m["context_line"].(string)) < 120 {
+	if m["context_line"] != nil && m["context_line"].(string) != "" {
 		output += m["context_line"].(string)
-	} else if m["symbol"] != nil {
-		output += m["symbol"].(string)
 	} else if m["function"] != nil {
 		output += m["function"].(string)
 	} else if m["lineno"] != nil {
 		output += m["lineno"].(string)
 	}
-
-	return output
-}
-
-func getContentStacktrace(m M) string {
-	output := ""
-	frames := m["frames"].([]interface{})
-	if frames != nil {
-		first := frames[0].(map[string]interface{})
-		if first["function"] != nil && isUrl(first["filename"].(string)) {
-			return output
-		}
-	}
-
-	for _, frame := range m["frames"].([]interface{}) {
-		// XXX ingored in_app value in frames
-		output += getContentFrame(frame.(map[string]interface{}))
-	}
-
 	return output
 }
 

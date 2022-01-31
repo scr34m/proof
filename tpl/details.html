@@ -1,18 +1,11 @@
 {{define "content"}}
 
 <div class="ui message">
-    <pre>{{ .Message }}</pre>
+    <pre class="break">{{ .Message }}</pre>
 </div>
 
-<h2>Tags</h2>
+<h2>Tags
 
-<p>
-    <div class="ui label"><strong>seen</strong> = {{ .Seen }}</div>
-    <div class="ui label"><strong>level</strong> = {{ .Level }}</div>
-    <div class="ui label"><strong>logger</strong> = {{ .Logger }}</div>
-    <div class="ui label"><strong>server_name</strong> = {{ .ServerName }}</div>
-    <div class="ui label"><strong>at</strong> = {{ .Time }}</div>
-    <div class="ui label"><strong>url</strong> = {{ .Url }}</div>
     {{ if .NewerId }}
     <a href="/details/{{ .GroupId }}/{{ .NewerId }}" class="mini ui primary button right floated">Newer</a>
     {{ else }}
@@ -23,6 +16,17 @@
     {{ else }}
     <a class="mini ui disabled primary button right floated">Older</a>
     {{ end }}
+
+
+</h2>
+
+<p>
+    <div class="ui label"><strong>seen</strong> = {{ .Seen }}</div>
+    <div class="ui label"><strong>level</strong> = {{ .Level }}</div>
+    <div class="ui label"><strong>logger</strong> = {{ .Logger }}</div>
+    <div class="ui label"><strong>server_name</strong> = {{ .ServerName }}</div>
+    <div class="ui label"><strong>at</strong> = {{ .Time }}</div>
+    <div class="ui label"><strong>url</strong> = {{ .Url }}</div>
 </p>
 
 <h2>Exception</h2>
