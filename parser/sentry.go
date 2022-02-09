@@ -218,6 +218,11 @@ func (s *Sentry) Process() (*ProcessStatus, error) {
 	var new bool
 	var regression bool
 
+	view := ""
+	if s.Packet.InterfaceHttp["url"] != nil {
+		view = s.Packet.InterfaceHttp["url"].(string)
+	}
+
 	err = stmt.QueryRow(checksum, s.Packet.Project).Scan(&groupId, &status)
 	if err == nil {
 		new = false
@@ -226,13 +231,13 @@ func (s *Sentry) Process() (*ProcessStatus, error) {
 			regression = true
 		}
 
-		stmt, err := s.Database.Prepare("UPDATE `group` SET last_seen = ?, seen = seen + 1, status = 0 WHERE id = ?")
+		stmt, err := s.Database.Prepare("UPDATE `group` SET last_seen = ?, seen = seen + 1, status = 0, logger = ?, `level` = ?, message = ?, project_id = ?, `server_name` = ?, url = ?, site = ?, platform = ? WHERE id = ?")
 		if err != nil {
 			return nil, err
 		}
 		defer stmt.Close()
 
-		_, err = stmt.Exec(lastSeen, groupId)
+		_, err = stmt.Exec(lastSeen, s.Packet.Logger, s.Packet.Level, s.Packet.Message, s.Packet.Project, s.Packet.ServerName, view, s.Packet.Site, s.Packet.Platform, groupId)
 		if err != nil {
 			return nil, err
 		}
@@ -240,11 +245,6 @@ func (s *Sentry) Process() (*ProcessStatus, error) {
 		seen := 1
 		new = true
 		regression = false
-
-		view := ""
-		if s.Packet.InterfaceHttp["url"] != nil {
-			view = s.Packet.InterfaceHttp["url"].(string)
-		}
 
 		stmt, err := s.Database.Prepare("INSERT INTO `group` (logger, `level`, message, checksum, seen, last_seen, first_seen, project_id, `server_name`, url, site, platform, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)")
 		if err != nil {
