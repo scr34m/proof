@@ -3,6 +3,7 @@ package router
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
 	"reflect"
@@ -221,6 +222,8 @@ func formatVarsArray(a []interface{}) string {
 		content += `<td>`
 		if s, ok := v.(string); ok {
 			content += s
+		} else if s, ok := v.(float64); ok {
+			content += fmt.Sprintf("%f", s)
 		} else {
 			content += formatVars(v)
 		}
@@ -241,6 +244,8 @@ func formatVarsMap(m map[string]interface{}) string {
 		content += `<td>`
 		if s, ok := v.(string); ok {
 			content += s
+		} else if s, ok := v.(float64); ok {
+			content += fmt.Sprintf("%f", s)
 		} else {
 			content += formatVars(v)
 		}
