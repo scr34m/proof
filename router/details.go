@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/alexedwards/stack"
 	"github.com/scr34m/proof/parser"
@@ -54,18 +53,17 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	d.Menu = "details"
 	d.MenuLink = "/details/" + parts[2]
 	d.GroupId = parts[2]
-	d.Time = time.Now().Format("2006-01-02 15:04:05")
 
 	// Read the latest event from the group
 	var params []interface{}
 
-	query := "SELECT d.data, e.message, g.url, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? ORDER BY e.id DESC LIMIT 1"
+	query := "SELECT d.data, e.message, g.url, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen, g.last_seen FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? ORDER BY e.id DESC LIMIT 1"
 	params = append(params, d.GroupId)
 
 	if len(parts) == 4 {
 		d.CurrentId = parts[3]
 		params = append(params, d.CurrentId)
-		query = "SELECT d.data, e.message, g.url, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? AND e.id = ?"
+		query = "SELECT d.data, e.message, g.url, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen, d.timestamp FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? AND e.id = ?"
 	}
 
 	stmt, err := db.Prepare(query)
@@ -74,7 +72,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer stmt.Close()
 
-	err = stmt.QueryRow(params...).Scan(&d.Data, &d.Message, &d.Url, &d.CurrentId, &d.Level, &d.Logger, &d.ServerName, &d.Platform, &d.Site, &d.Seen)
+	err = stmt.QueryRow(params...).Scan(&d.Data, &d.Message, &d.Url, &d.CurrentId, &d.Level, &d.Logger, &d.ServerName, &d.Platform, &d.Site, &d.Seen, &d.Time)
 	if err != nil {
 		panic(err)
 	}
