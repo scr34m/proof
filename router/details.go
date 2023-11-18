@@ -225,7 +225,6 @@ func formatVarsArray(a []interface{}) string {
 		} else {
 			content += formatVars(v)
 		}
-		content += v.(string)
 		content += `</td>`
 		content += `</tr>`
 	}
