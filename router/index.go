@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/alexedwards/stack"
+	"github.com/scr34m/proof/config"
 )
 
 func Index(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
@@ -64,12 +65,14 @@ func Index(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Menu     string
 		MenuLink string
+		Version  string
 
 		Time   string
 		Events []event
 	}{
 		Menu:     "index",
 		MenuLink: "/",
+		Version:  config.VERSION,
 		Time:     time.Now().Format("2006-01-02 15:04:05"),
 		Events:   events,
 	}

@@ -47,3 +47,6 @@ tr.acknowledged td {
     word-break: break-all;
     white-space: pre-wrap;
 }
+.footer {
+    text-align: center;
+}

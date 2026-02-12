@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/alexedwards/stack"
+	"github.com/scr34m/proof/config"
 	"github.com/scr34m/proof/parser"
 )
 
@@ -49,12 +50,14 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		Request    []request
 		User       map[string]string
 		Contexts   map[string]string
+		Version    string
 	}
 
 	d := data{}
 	d.Menu = "details"
 	d.MenuLink = "/details/" + parts[2]
 	d.GroupId = parts[2]
+	d.Version = config.VERSION
 
 	// Read the latest event from the group
 	var params []interface{}
