@@ -92,6 +92,19 @@
 </table>
 {{end}}
 
+{{ if .Contexts }}
+<h2>Contexts</h2>
+
+<table class="ui striped right aligned table">
+    {{range $k, $v := .Contexts}}
+    <tr>
+        <td class="left aligned two wide"><strong>{{ $k }}</strong></td>
+        <td class="left aligned break">{{ $v }}</td>
+    </tr>
+    {{end}}
+</table>
+{{end}}
+
 <script type="text/javascript">
     appCode.push(function () {
         $('.frame li').click(function () {

@@ -39,6 +39,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		Url        string
 		Message    string
 		Data       string
+		Protocol   string
 		Level      string
 		Logger     string
 		ServerName string
@@ -47,6 +48,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		Frames     []parser.Frame
 		Request    []request
 		User       map[string]string
+		Contexts   map[string]string
 	}
 
 	d := data{}
@@ -57,13 +59,13 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	// Read the latest event from the group
 	var params []interface{}
 
-	query := "SELECT d.data, e.message, g.url, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen, g.last_seen FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? ORDER BY e.id DESC LIMIT 1"
+	query := "SELECT d.data, d.protocol, e.message, g.url, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen, g.last_seen FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? ORDER BY e.id DESC LIMIT 1"
 	params = append(params, d.GroupId)
 
 	if len(parts) == 4 {
 		d.CurrentId = parts[3]
 		params = append(params, d.CurrentId)
-		query = "SELECT d.data, e.message, g.url, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen, d.timestamp FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? AND e.id = ?"
+		query = "SELECT d.data, d.protocol, e.message, g.url, e.id, g.level, g.logger, g.server_name, g.platform, g.site, g.seen, d.timestamp FROM `group` g LEFT JOIN event e ON g.id = e.group_id LEFT JOIN `data` d ON e.data_id = d.id WHERE g.id = ? AND e.id = ?"
 	}
 
 	stmt, err := db.Prepare(query)
@@ -72,7 +74,7 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer stmt.Close()
 
-	err = stmt.QueryRow(params...).Scan(&d.Data, &d.Message, &d.Url, &d.CurrentId, &d.Level, &d.Logger, &d.ServerName, &d.Platform, &d.Site, &d.Seen, &d.Time)
+	err = stmt.QueryRow(params...).Scan(&d.Data, &d.Protocol, &d.Message, &d.Url, &d.CurrentId, &d.Level, &d.Logger, &d.ServerName, &d.Platform, &d.Site, &d.Seen, &d.Time)
 	if err != nil {
 		panic(err)
 	}
@@ -101,87 +103,101 @@ func Details(ctx *stack.Context, w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	m, err := parser.Decode(d.Data)
+	var p parser.Packet
+	err = parser.Decode(d.Data, d.Protocol, "", &p)
 	if err != nil {
 		panic(err)
 	}
 
-	trace := m["sentry.interfaces.Stacktrace"].(map[string]interface{})
-	for _, v := range trace["frames"].([]interface{}) {
-
-		_v := v.(map[string]interface{})
-
-		f := parser.Frame{
-			AbsPath:  _v["abs_path"].(string),
-			Function: _v["function"].(string),
-			LineNo:   _v["lineno"].(float64),
-			Context:  strings.Replace(_v["context_line"].(string), " ", "\u00A0", -1),
-		}
-
-		if _v["pre_context"] != nil {
-			for _, c := range _v["pre_context"].([]interface{}) {
-				f.PreContext = append(f.PreContext, strings.Replace(c.(string), " ", "\u00A0", -1))
-			}
-		}
-
-		if _v["post_context"] != nil {
-			for _, c := range _v["post_context"].([]interface{}) {
-				f.PostContext = append(f.PostContext, strings.Replace(c.(string), " ", "\u00A0", -1))
-			}
-		}
-
-		if _v["vars"] != nil {
-			f.Vars = template.HTML(formatVars(_v["vars"]))
-		}
-
+	for _, f := range p.GetFrames(d.Protocol) {
+		f.Vars = template.HTML(formatVars(f.VarsRaw))
 		d.Frames = append(d.Frames, f)
 	}
 
+	var http parser.Request
+	if d.Protocol == "7" {
+		http = p.InterfaceHttp7
+	} else {
+		http = p.InterfaceHttp
+	}
+
+	var httpmap map[string]interface{}
+	httpjson, _ := json.Marshal(http)
+	json.Unmarshal(httpjson, &httpmap)
+
 	var keys []string
+	for k := range httpmap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
-	if m["sentry.interfaces.Http"] != nil {
-		http := m["sentry.interfaces.Http"].(map[string]interface{})
-		for k := range http {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, key := range keys {
-			v := http[key]
-			r := request{Name: key}
-			if reflect.TypeOf(v).Kind() == reflect.String {
-				r.Value = v.(string)
-			} else {
-				var keys2 []string
-				for k2 := range v.(map[string]interface{}) {
-					keys2 = append(keys2, k2)
-				}
-				sort.Strings(keys2)
-
-				for _, key2 := range keys2 {
-					b, _ := json.Marshal(v.(map[string]interface{})[key2])
-					r.ValueList = append(r.ValueList, request{Name: key2, Value: string(b)})
-				}
+	for _, key := range keys {
+		v := httpmap[key]
+		r := request{Name: key}
+		if v == nil {
+			r.Value = ""
+		} else if reflect.TypeOf(v).Kind() == reflect.String {
+			r.Value = v.(string)
+		} else {
+			var keys2 []string
+			for k2 := range v.(map[string]interface{}) {
+				keys2 = append(keys2, k2)
 			}
-			d.Request = append(d.Request, r)
+			sort.Strings(keys2)
+			for _, key2 := range keys2 {
+				b, _ := json.Marshal(v.(map[string]interface{})[key2])
+				r.ValueList = append(r.ValueList, request{Name: key2, Value: string(b)})
+			}
 		}
+		d.Request = append(d.Request, r)
 	}
 
-	if m["sentry.interfaces.User"] != nil {
-		d.User = make(map[string]string)
-		user := m["sentry.interfaces.User"].(map[string]interface{})
-		keys = nil
-		for k := range user {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, key := range keys {
-			b, _ := json.Marshal(user[key])
-			d.User[key] = string(b)
-		}
-	}
+	d.User = detailUser(p, d.Protocol)
+
+	d.Contexts = detailContexts(p)
 
 	templates := template.Must(template.ParseFiles("tpl/layout.html", "tpl/details.html"))
 	templates.Execute(w, d)
+}
+
+func detailUser(p parser.Packet, protocol string) map[string]string {
+	result := make(map[string]string)
+	var user map[string]interface{}
+
+	if protocol == "7" {
+		user = p.User
+	} else {
+		user = p.InterfaceUser
+	}
+
+	var keys []string
+	for k := range user {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		b, _ := json.Marshal(user[key])
+		result[key] = string(b)
+	}
+	return result
+}
+
+func detailContexts(p parser.Packet) map[string]string {
+	result := make(map[string]string)
+	contexts := p.Contexts
+
+	var keys []string
+	for k := range contexts {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		b, _ := json.Marshal(contexts[key])
+		result[key] = string(b)
+	}
+	return result
 }
 
 func formatVars(i interface{}) string {

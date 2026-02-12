@@ -1,5 +1,6 @@
 body > .ui.container {
     margin-top: 3em;
+    padding-bottom: 3em;
 }
 .ui.label strong {
     color: black;

@@ -2,209 +2,142 @@ package parser
 
 import (
 	"bytes"
+	"compress/gzip"
 	"compress/zlib"
 	"crypto/md5"
 	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"html/template"
 	"io/ioutil"
-	"log"
 	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/scr34m/proof/shared"
 )
+
+type Parser interface {
+	Load(string) error
+	Process() (ProcessStatus, error)
+}
+
+type ProcessStatus struct {
+	GroupId      int64
+	Message      string
+	Site         string
+	ServerName   string
+	Level        string
+	Frames       []Frame
+	IsNew        bool
+	IsRegression bool
+}
+
+type Frame struct {
+	AbsPath     string
+	Function    string
+	LineNo      float64
+	PreContext  []string
+	Context     string
+	PostContext []string
+	VarsRaw     I
+	Vars        template.HTML
+}
 
 type Sentry struct {
 	Parser
-	Database *sql.DB
-	Packet   Packet
-	hash     string
-	payload  string
+	Database  *sql.DB
+	Packet    Packet
+	hash      string
+	payload   string
+	protocol  string
+	projectId string
 }
+
+type I interface{}
 
 type A []interface{}
 
 type M map[string]interface{}
 
+type Value struct {
+	Type       string     `json:"type"`       // 7
+	Value      string     `json:"value"`      // 7
+	Stacktrace Stacktrace `json:"stacktrace"` // 7
+	Mechanicm  M          `json:"mechanism"`  // 7
+}
+
+type Exception struct {
+	Values []Value `json:"values"` // 7
+}
+
+type Request struct {
+	Url         string `json:"url"`          // 4, 7
+	Method      string `json:"method"`       // 4, 7
+	QueryString string `json:"query_string"` // 4, 7
+	Headers     M      `json:"headers"`      // 4, 7
+	Env         M      `json:"env"`          // 4
+}
+
+type Stacktrace struct {
+	Frames []StackFrame `json:"frames"` // 4, 7
+}
+
+type StackFrame struct {
+	AbsPath     string   `json:"abs_path"`     // 4, 7
+	Filename    string   `json:"filename"`     // 4, 7
+	Function    string   `json:"function"`     // 4, 7
+	Module      string   `json:"module"`       // 4, 7
+	LineNo      float64  `json:"lineno"`       // 4, 7
+	ContextLine string   `json:"context_line"` // 4, 7
+	PreContext  []string `json:"pre_context"`  // 4, 7
+	PostContext []string `json:"post_context"` // 4, 7
+	Vars        I        `json:"vars"`         // 4, 7
+}
+
 type Packet struct {
-	ServerName          string `json:"server_name"`
-	Project             string `json:"project"`
-	Site                string `json:"site"`
-	Logger              string `json:"logger"`
-	Level               string `json:"level"`
-	Tags                A      `json:"tags"`
-	Platform            string `json:"platform"`
-	Message             string `json:"message"`
-	InterfaceUser       M      `json:"sentry.interfaces.User"`
-	InterfaceHttp       M      `json:"sentry.interfaces.Http"`
-	InterfaceException  M      `json:"sentry.interfaces.Exception"`
-	InterfaceStacktrace M      `json:"sentry.interfaces.Stacktrace"`
-	Timestamp           string `json:"timestamp"`
+	ServerName          string     `json:"server_name"`                  // 4, 7
+	Environment         string     `json:"environment"`                  // 7
+	Project             string     `json:"project"`                      // 4
+	Site                string     `json:"site"`                         // 4
+	Logger              string     `json:"logger"`                       // 4
+	Level               string     `json:"level"`                        // 4
+	Platform            string     `json:"platform"`                     // 4, 7
+	Message             string     `json:"message"`                      // 4
+	User                M          `json:"user"`                         // 7
+	InterfaceUser       M          `json:"sentry.interfaces.User"`       // 4
+	InterfaceHttp       Request    `json:"sentry.interfaces.Http"`       // 4
+	InterfaceException  M          `json:"sentry.interfaces.Exception"`  // 4
+	InterfaceStacktrace Stacktrace `json:"sentry.interfaces.Stacktrace"` // 4
+	InterfaceHttp7      Request    `json:"request"`                      // 7
+	InterfaceException7 Exception  `json:"exception"`                    // 7
+	Contexts            M          `json:"contexts"`                     // 7
+	Timestamp           I          `json:"timestamp"`                    // 4: string, 7: float
 }
 
-func (s *Sentry) Load(payload string) error {
-
-	s.payload = payload
-	s.hash = GetMD5Hash(payload)
-
-	c, _ := base64.StdEncoding.DecodeString(s.payload)
-
-	b := bytes.NewBufferString(string(c))
-
-	z, err := zlib.NewReader(b)
-	if err != nil {
-		return err
+func (s *Sentry) Load(qpacket shared.QueuePacket) error {
+	if qpacket.Protocol == "7" {
+		s.payload = base64.StdEncoding.EncodeToString(qpacket.Body)
+	} else {
+		s.payload = string(qpacket.Body)
 	}
-	defer z.Close()
-
-	p, err := ioutil.ReadAll(z)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(p, &s.Packet)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
- * https://stackoverflow.com/questions/13331973/how-does-sentry-aggregate-errors
- * https://github.com/getsentry/sentry/blob/6.4.4/src/sentry/interfaces.py
- * https://github.com/getsentry/sentry/blob/6.4.4/src/sentry/data/samples/python.json
- */
-func (s *Sentry) GetChecksum() string {
-	// ignore sentry.interfaces.User
-	// ignore sentry.interfaces.Http
-
-	/*
-	   class Interface(object):
-
-	   def get_composite_hash(self, interfaces):
-	   	return self.get_hash()
-
-	   def get_hash(self):
-	   	return []
-	*/
-
-	// sentry.interfaces.Stacktrace
-	/*
-		class Stacktrace(Interface):
-		    >>> {
-		    >>>     "frames": [{
-		    >>>         "abs_path": "/real/file/name.py"
-		    >>>         "filename": "file/name.py",
-		    >>>         "function": "myfunction",
-		    >>>         "vars": {
-		    >>>             "key": "value"
-		    >>>         },
-		    >>>         "pre_context": [
-		    >>>             "line1",
-		    >>>             "line2"
-		    >>>         ],
-		    >>>         "context_line": "line3",
-		    >>>         "lineno": 3,
-		    >>>         "in_app": true,
-		    >>>         "post_context": [
-		    >>>             "line4",
-		    >>>             "line5"
-		    >>>         ],
-		    >>>     }],
-		    >>>     "frames_omitted": [13, 56]
-		    >>> }
-
-		    def get_composite_hash(self, interfaces):
-		        output = self.get_hash()
-		        if 'sentry.interfaces.Exception' in interfaces:
-		            exc = interfaces['sentry.interfaces.Exception'][0]
-		            if exc.type:
-		                output.append(exc.type)
-		            elif not output:
-		                output = exc.get_hash()
-		        return output
-
-		    def get_hash(self):
-		        output = []
-		        for frame in self.frames:
-		            output.extend(frame.get_hash())
-		        return output
-	*/
-	/*
-		class Frame(object):
-
-		def get_hash(self):
-			output = []
-			if self.module:
-				output.append(self.module)
-			elif self.filename and not self.is_url():
-				output.append(self.filename)
-
-			if self.context_line is not None:
-				output.append(self.context_line)
-			elif not output:
-				# If we were unable to achieve any context at this point
-				# (likely due to a bad JavaScript error) we should just
-				# bail on recording this frame
-				return output
-			elif self.function:
-				output.append(self.function)
-			elif self.lineno is not None:
-				output.append(self.lineno)
-			return output
-	*/
-
-	// sentry.interfaces.Exception
-	/*
-		class SingleException(Interface):
-
-			>>>  {
-			>>>     "type": "ValueError",
-			>>>     "value": "My exception value",
-			>>>     "module": "__builtins__"
-			>>>     "stacktrace": {
-			>>>         # see sentry.interfaces.Stacktrace
-			>>>     }
-			>>> }
-
-		def get_hash(self):
-			output = None
-			if self.stacktrace:
-				output = self.stacktrace.get_hash()
-				if output and self.type:
-					output.append(self.type)
-			if not output:
-				output = filter(bool, [self.type, self.value])
-			return output
-	*/
-	if s.Packet.InterfaceStacktrace != nil {
-		content := getContentStacktrace(s.Packet.InterfaceStacktrace)
-		if s.Packet.InterfaceException != nil {
-			content += s.Packet.InterfaceException["type"].(string)
-		}
-		return GetMD5Hash(content)
-	}
-
-	if s.Packet.InterfaceException != nil {
-		content := ""
-		content += s.Packet.InterfaceException["type"].(string)
-		content += s.Packet.InterfaceException["value"].(string)
-		return GetMD5Hash(content)
-	}
-
-	return GetMD5Hash(s.Packet.Message)
+	s.hash = GetMD5Hash(s.payload)
+	s.protocol = qpacket.Protocol
+	s.projectId = qpacket.ProjectId
+	return Decode(s.payload, s.protocol, s.projectId, &s.Packet)
 }
 
 func (s *Sentry) Process() (*ProcessStatus, error) {
-
 	checksum := s.GetChecksum()
+	lastSeen := s.GetLastSeen()
+	frames := s.GetFrames()
 
-	lastSeen, err := time.Parse(time.RFC3339, s.Packet.Timestamp)
-	if err != nil {
-		log.Println(err)
+	var url string
+	if s.protocol == "7" {
+		url = s.Packet.InterfaceHttp7.Url
+	} else {
+		url = s.Packet.InterfaceHttp.Url
 	}
 
 	stmt, err := s.Database.Prepare("SELECT id, status FROM `group` WHERE checksum = ? AND project_id = ?")
@@ -217,11 +150,6 @@ func (s *Sentry) Process() (*ProcessStatus, error) {
 	var status int64
 	var new bool
 	var regression bool
-
-	view := ""
-	if s.Packet.InterfaceHttp["url"] != nil {
-		view = s.Packet.InterfaceHttp["url"].(string)
-	}
 
 	err = stmt.QueryRow(checksum, s.Packet.Project).Scan(&groupId, &status)
 	if err == nil {
@@ -237,7 +165,7 @@ func (s *Sentry) Process() (*ProcessStatus, error) {
 		}
 		defer stmt.Close()
 
-		_, err = stmt.Exec(lastSeen, s.Packet.Logger, s.Packet.Level, s.Packet.Message, s.Packet.Project, s.Packet.ServerName, view, s.Packet.Site, s.Packet.Platform, groupId)
+		_, err = stmt.Exec(lastSeen, s.Packet.Logger, s.Packet.Level, s.Packet.Message, s.Packet.Project, s.Packet.ServerName, url, s.Packet.Site, s.Packet.Platform, groupId)
 		if err != nil {
 			return nil, err
 		}
@@ -253,7 +181,7 @@ func (s *Sentry) Process() (*ProcessStatus, error) {
 		defer stmt.Close()
 
 		res, err := stmt.Exec(s.Packet.Logger, s.Packet.Level, s.Packet.Message, checksum, seen, lastSeen, lastSeen, s.Packet.Project,
-			s.Packet.ServerName, view, s.Packet.Site, s.Packet.Platform)
+			s.Packet.ServerName, url, s.Packet.Site, s.Packet.Platform)
 		if err != nil {
 			return nil, err
 		}
@@ -279,25 +207,6 @@ func (s *Sentry) Process() (*ProcessStatus, error) {
 		return nil, err
 	}
 
-	// Decode payload to get stacktrace
-	m, err := Decode(s.payload)
-	if err != nil {
-		return nil, err
-	}
-
-	var frames []Frame
-	trace := m["sentry.interfaces.Stacktrace"].(map[string]interface{})
-	for _, v := range trace["frames"].([]interface{}) {
-		_v := v.(map[string]interface{})
-		f := Frame{
-			AbsPath:  _v["abs_path"].(string),
-			Function: _v["function"].(string),
-			LineNo:   _v["lineno"].(float64),
-			Context:  strings.Replace(_v["context_line"].(string), " ", "\u00A0", -1),
-		}
-		frames = append(frames, f)
-	}
-
 	ps := &ProcessStatus{GroupId: groupId, Message: s.Packet.Message, ServerName: s.Packet.ServerName, Site: s.Packet.Site, Level: s.Packet.Level, IsNew: new, IsRegression: regression, Frames: frames}
 	return ps, nil
 }
@@ -312,16 +221,16 @@ func (s *Sentry) storeData(lastSeen time.Time) error {
 	var h string
 
 	err = stmt.QueryRow(s.hash).Scan(&h)
-	if err == nil { // XXX sql: no rows in result set
+	if err == nil {
 		return nil
 	}
 
-	stmt, err = s.Database.Prepare("INSERT INTO data (id, data, timestamp) VALUES (?, ?, ?)")
+	stmt, err = s.Database.Prepare("INSERT INTO data (id, data, timestamp, protocol) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(s.hash, s.payload, lastSeen)
+	_, err = stmt.Exec(s.hash, s.payload, lastSeen, s.protocol)
 	if err != nil {
 		return err
 	}
@@ -329,42 +238,66 @@ func (s *Sentry) storeData(lastSeen time.Time) error {
 	return nil
 }
 
-func getContentStacktrace(m M) string {
-	output := ""
-	for _, frame := range m["frames"].([]interface{}) {
-		output += getContentFrame(frame.(map[string]interface{}))
+func Decode(payload string, protocol string, projectId string, v *Packet) error {
+	var err error
+	var p []byte
+
+	if protocol == "7" {
+		p, err = readGzip(payload)
+		_, _, body := getParts(string(p))
+		p = []byte(body)
+	} else {
+		p, err = readZlib(payload)
 	}
-	return output
+
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(p, v)
+	if err != nil {
+		return err
+	}
+
+	if protocol == "7" {
+		v.Message = v.InterfaceException7.Values[0].Value
+		v.Level = v.InterfaceException7.Values[0].Type
+		v.Logger = v.Platform
+		v.Project = projectId
+	}
+
+	return nil
 }
 
-func getContentFrame(m M) string {
-	output := ""
-	if m["module"] != nil {
-		output += m["module"].(string)
-	} else if m["filename"] != nil && !isUrl(m["filename"].(string)) {
-		output += m["filename"].(string)
+func readGzip(payload string) ([]byte, error) {
+	c, _ := base64.StdEncoding.DecodeString(payload)
+	b := bytes.NewBufferString(string(c))
+
+	z, err := gzip.NewReader(b)
+	if err != nil {
+		return nil, err
 	}
-	if m["context_line"] != nil && m["context_line"].(string) != "" {
-		output += m["context_line"].(string)
-	} else if m["function"] != nil {
-		output += m["function"].(string)
-	} else if m["lineno"] != nil {
-		output += m["lineno"].(string)
-	}
-	return output
+	defer z.Close()
+
+	return ioutil.ReadAll(z)
 }
 
-func isUrl(s string) bool {
-	if strings.Contains(s, "file:") {
-		return true
+func readZlib(payload string) ([]byte, error) {
+	c, _ := base64.StdEncoding.DecodeString(payload)
+	b := bytes.NewBufferString(string(c))
+
+	z, err := zlib.NewReader(b)
+	if err != nil {
+		return nil, err
 	}
-	if strings.Contains(s, "http:") {
-		return true
-	}
-	if strings.Contains(s, "https:") {
-		return true
-	}
-	return false
+	defer z.Close()
+
+	return ioutil.ReadAll(z)
+}
+
+func getParts(payload string) (envelope string, header string, body string) {
+	lines := strings.Split(strings.TrimSpace(payload), "\n")
+	return lines[0], lines[1], lines[2]
 }
 
 func GetMD5Hash(text string) string {

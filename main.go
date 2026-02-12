@@ -84,6 +84,7 @@ func main() {
 	if *notificationShow {
 		// XXX for terminal-notification
 		os.Setenv("PATH", os.Getenv("PATH")+":/usr/local/bin")
+		os.Setenv("PATH", os.Getenv("PATH")+":/opt/homebrew/bin")
 
 		notif = notification.NewNotification(*listen, 1000)
 	}

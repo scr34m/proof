@@ -4,7 +4,10 @@ CREATE TABLE `event` (
   `group_id` int(11) DEFAULT NULL,
   `message` longtext NOT NULL,
   `checksum` varchar(32) NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `idx_1` (`group_id`) USING BTREE,
+  KEY `idx_2` (`id`),
+  KEY `idx_3` (`data_id`(16))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `group` (
@@ -22,13 +25,17 @@ CREATE TABLE `group` (
   `platform` varchar(64) DEFAULT NULL,
   `url` varchar(200) DEFAULT NULL,
   `site` varchar(128) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `idx_1` (`checksum`,`project_id`),
+  KEY `idx_2` (`status`,`last_seen`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `data` (
   `id` varchar(32) NOT NULL,
   `data` longtext NOT NULL,
   `timestamp` datetime NOT NULL,
-  PRIMARY KEY (`id`)
+  `protocol` tinyint NOT NULL DEFAULT 4,
+  PRIMARY KEY (`id`),
+  KEY `id` (`id`(16))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

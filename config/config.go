@@ -3,7 +3,7 @@ package config
 const (
 	PW_SALT_BYTES   = 32
 	SESSION_NAME    = "PROOFSESS"
-	VERSION         = "0.2"
+	VERSION         = "0.3"
 	COOKIE_KEY_AUTH = "auth"
 )
 

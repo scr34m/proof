@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -66,6 +67,7 @@ func (f *frontend) Start(listen string) {
 	stk_basic := stack.New(f.loggingHandler, f.authHandler, f.recoverHandler)
 
 	router.Handle("/api/store", stk_basic.Then(r.Parser), "POST")
+	router.Handle("/api/:num/envelope", stk_basic.Then(r.Parser), "POST")
 
 	fs := http.FileServer(http.Dir("assets"))
 	router.Handle("/assets/*", http.StripPrefix("/assets/", fs))
@@ -131,19 +133,34 @@ func (f *frontend) authHandler(ctx *stack.Context, next http.Handler) http.Handl
 
 		user, pass, ok := r.BasicAuth()
 
-		for _, site := range auth.Site {
-			if !site.Enabled {
-				continue
-			}
+		sentry_auth := parseSentryAuth(r.Header.Get("X-Sentry-Auth"))
+		if len(sentry_auth) > 0 {
 
-			if strings.Contains(r.Header.Get("X-Sentry-Auth"), "sentry_key="+site.Username) && strings.Contains(r.Header.Get("X-Sentry-Auth"), "sentry_secret="+site.Password) {
-				next.ServeHTTP(w, r)
-				return
-			}
+			version := sentry_auth["sentry_version"]
+			key := sentry_auth["sentry_key"]
+			secret := sentry_auth["sentry_secret"]
 
-			if ok && user == site.Username && pass == site.Password {
-				next.ServeHTTP(w, r)
-				return
+			ctxWithVersion := context.WithValue(r.Context(), "sentry_version", version)
+
+			for _, site := range auth.Site {
+				if !site.Enabled {
+					continue
+				}
+
+				if key == site.Username && version == "7" {
+					next.ServeHTTP(w, r.WithContext(ctxWithVersion))
+					return
+				}
+
+				if key == site.Username && secret == site.Password {
+					next.ServeHTTP(w, r.WithContext(ctxWithVersion))
+					return
+				}
+
+				if ok && user == site.Username && pass == site.Password {
+					next.ServeHTTP(w, r.WithContext(ctxWithVersion))
+					return
+				}
 			}
 		}
 
@@ -153,11 +170,29 @@ func (f *frontend) authHandler(ctx *stack.Context, next http.Handler) http.Handl
 	})
 }
 
+// Parse X-Sentry-Auth header content
+// ex.: Sentry sentry_version=7, sentry_client=sentry.php/4.19.1, sentry_key=a4f7646fd83544dd9499c18561338d56
+func parseSentryAuth(header string) map[string]string {
+	list := make(map[string]string)
+	header = strings.Replace(header, "Sentry ", "", 1) // XXX hacky, remove "Sentry "
+	for _, s := range strings.Split(header, ",") {
+		s = strings.Trim(s, " ")
+		p := strings.Index(s, "=")
+		if p != -1 {
+			k := s[:p]
+			v := s[(p + 1):]
+			list[k] = v
+		}
+	}
+	return list
+}
+
 func (f *frontend) recoverHandler(ctx *stack.Context, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
 				log.Printf("panic: %+v", err)
+				log.Println(string(debug.Stack()))
 				http.Error(w, http.StatusText(500), 500)
 			}
 		}()

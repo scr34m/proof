@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"log"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 	"github.com/scr34m/proof/config"
 	m "github.com/scr34m/proof/mail"
 	"github.com/scr34m/proof/router"
+	"github.com/scr34m/proof/shared"
 )
 
 type Worker interface {
@@ -73,7 +75,14 @@ func (w *worker) loop(ctx context.Context) error {
 			if val != nil {
 				if val[1] != "0" {
 					log.Println("Processing event")
-					_, err := router.ProcessBody(w.db, w.auth, w.mailer, val[1])
+
+					queuePacket := shared.QueuePacket{}
+					err := json.Unmarshal([]byte(val[1]), &queuePacket)
+					if err != nil {
+						return err
+					}
+
+					_, err = router.ProcessBody(w.db, w.auth, w.mailer, queuePacket)
 					if err != nil {
 						return err
 					}

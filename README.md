@@ -3,6 +3,8 @@ Minimal Sentry alternative / drop-in replacement
 
 Ideal for local development or small teams to monitor application error reports.
 
+Supported Sentry protocols are 4 (old) and 7 (latest)
+
 Auth mode configuration file
 ===
 

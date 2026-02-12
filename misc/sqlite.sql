@@ -30,6 +30,7 @@ CREATE TABLE `group` (
 CREATE TABLE `data` (
   id CHAR(32) NOT NULL,
   data TEXT NOT NULL,
-  timestamp TEXT NOT NULL
+  timestamp TEXT NOT NULL,
+  protocol INT NOT NULL,
 );
 
